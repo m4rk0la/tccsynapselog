@@ -7,17 +7,6 @@
     }
   ],
   "env": {
-    "FLASK_ENV": "production",
-    "SECRET_KEY": "@SECRET_KEY",
-    "SQLALCHEMY_DATABASE_URI": "@DATABASE_URL",
-    "MAIL_SERVER": "@MAIL_SERVER",
-    "MAIL_PORT": "@MAIL_PORT",
-    "MAIL_USERNAME": "@MAIL_USERNAME",
-    "MAIL_PASSWORD": "@MAIL_PASSWORD",
-    "SENTRY_DSN": "@SENTRY_DSN",
-    "REDIS_URL": "@REDIS_URL",
-    "OAUTH_GOOGLE_CLIENT_ID": "@OAUTH_GOOGLE_CLIENT_ID",
-    "OAUTH_GOOGLE_CLIENT_SECRET": "@OAUTH_GOOGLE_CLIENT_SECRET"
   },
   "functions": {
     "app.py": {
@@ -27,6 +16,7 @@
     }
   }
 }
+
 
 
 
