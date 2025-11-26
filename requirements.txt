@@ -1,0 +1,16 @@
+Flask
+Flask-WTF
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Login
+python-dotenv
+pytest
+pytest-flask
+email_validator
+bootstrap-flask
+pandas
+openpyxl
+shapely
+scikit-learn
+numpy
+sklearn
