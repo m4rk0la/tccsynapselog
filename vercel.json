@@ -3,20 +3,21 @@
   "routes": [
     { 
       "src": "/(.*)", 
-      "dest": "api/index.py" 
+      "dest": "app.py" 
     }
   ],
   "env": {
     "FLASK_ENV": "production"
   },
   "functions": {
-    "api/index.py": {
+    "app.py": {
       "memory": 1024,
       "maxDuration": 30,
       "excludeFiles": "**/__pycache__/**,**/tests/**,**/test/**,**/docs/**,**/*.pyc,**/numpy/doc/**,**/scipy/tests/**,**/pandas/tests/**,**/sklearn/datasets/data/**,**/sklearn/tests/**,**/shapely/tests/**"
     }
   }
 }
+
 
 
 
