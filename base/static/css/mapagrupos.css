@@ -1,0 +1,200 @@
+    :root{
+      --bg-page: #F5F5F5;        /* página — tom suave e neutro */
+      --map-bg:  #414242;        /* fundo do mapa atrás dos tiles */
+      --sidebar-bg: rgba(255,255,255,0.95);
+      --accent: #1976d2;
+      --selected: #e6f4ff;      /* cor do item selecionado (leve azul) */
+      --muted: #55606a;
+    }
+   html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg-page);           /* usa a variável definida em :root (cinza) */
+    color: #e6edf0;                       /* texto leve sobre o fundo escuro */
+    font-family: "Avenir Next", "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+
+    #map {  position: absolute;
+    left: 40px;        /* distância da borda esquerda — ajustável */
+    top: 80px;         /* reserva espaço para cabeçalho e botões acima */
+    right: 380px;      /* reserva a área da sidebar à direita (320px + margem) */
+    bottom: 60px;      /* distancia inferior para botão/rodapé */
+    background: var(--map-bg);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    overflow: hidden;
+  }
+  
+   /* espaço para sidebar */
+    sidebar{
+    position: absolute;
+    right: 10px;
+    top: 80px;
+    bottom: 60px;              /* limita altura entre topo e rodapé (dentro das linhas azuis) */
+    width: 320px;
+    display: flex;             /* layout em coluna para permitir crescimento controlado */
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    padding: 10px;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    overflow: hidden;          /* evita duplos scrolls na sidebar */
+  }
+
+
+      .sidebar{
+    position: absolute;
+    right: 10px;
+    top: 80px;
+    bottom: 60px;              /* limita altura entre topo e rodapé (dentro das linhas azuis) */
+    width: 320px;
+    display: flex;             /* layout em coluna para permitir crescimento controlado */
+    flex-direction: column;
+    gap: 8px;
+    background: #2f313b;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    padding: 10px;
+    z-index: 1000;
+    font-family: Arial, sans-serif;
+    font-size: 15px;
+    color: #eef3f6;
+    overflow: hidden;          /* evita duplos scrolls na sidebar */
+  }
+
+  /* área onde as formas apareçam — cresce até o limite da sidebar e vira scroll se necessário */
+  #featuresList{
+    flex: 1 1 auto;            /* ocupa espaço disponível */
+    min-height: 56px;
+    overflow: auto;            /* scroll quando ultrapassar o espaço disponível */
+    padding-right: 6px;        /* evita que texto fique sob a barra de rolagem */
+  }
+
+
+  /* título padrão das features (não selecionadas) */
+  .feature-title{
+      font-weight:600;
+      font-size:15px;
+      color:#21313b;
+      text-align:left;
+      line-height:18px;
+      width:100%;
+    }
+
+  /* título da feature selecionada */
+     .feature-item.selected .feature-title{
+      font-size:17px;       /* tamanho solicitado */
+      line-height:17px;     /* altura da linha igual à altura pedida */
+      color:#ffffff;        /* fonte branca */
+      text-align:center;    /* centraliza horizontalmente no título */
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+    }
+
+  /* controles e export ficam com tamanho fixo (não empurram a lista) */
+  .controls { flex: 0 0 auto; }
+  .small, .controls, .feature-item { box-sizing: border-box; }
+
+  /* textarea de export: tamanho fixo com overflow interno */
+  textarea#exportOutput{
+    flex: 0 0 160px;
+    max-height: 160px;
+    width: 100%;
+    overflow: auto;
+    resize: vertical;
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  .app-header{
+      position: absolute; 
+      left: 0px;           /* distância da borda esquerda */
+      right: 0px;          /* distância da borda direita */
+      top: 0px;            /* distância do topo da janela */
+      height: 70px;         /* altura do cabeçalho */
+      background: linear-gradient(90deg,#11111F,#1f2937);
+      color: #ffffff;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      font-family: 'Avenir Next', 'Segoe UI', Roboto, Arial, sans-serif;
+      padding: 0 12px;
+      z-index: 1100;
+      gap: 12px;
+    }
+    .app-header .title{
+      right: 40px;           /* distância da borda direita */
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .app-header .hdr-controls{
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn{
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--accent);     /* cor primária */
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  transition: transform .08s ease, box-shadow .12s ease, opacity .12s;
+}
+    .btn:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+}
+    .btn:active{ transform: translateY(0); box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+    .btn:focus{ outline: 2px solid rgba(25,118,210,0.18); outline-offset: 2px; }
+    .btn.secondary{
+  background: #4a4f55;
+  color: #fff;
+  box-shadow: none;
+}
+    .btn.secondary:hover{ background: #61666b; }
+
+    .btn.small{ padding:4px 8px; font-size:13px; border-radius:6px; }
+    .btn.ghost{ background: transparent; color: var(--accent); border: 1px solid rgba(25,118,210,0.12); }
+
+    .app-header .hdr-controls .btn{
+      padding: 6px 10px;
+      font-size: 13px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #FF8F1C;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(25,118,210,0.12);
+    }
+     .app-header .logo {
+      width: 70px;               /* ajustar tamanho aqui */
+      height: 70px;
+      margin-right: 0px;
+      flex: 0 0 70px;
+      display: inline-block;
+      overflow: hidden;
+      background: #11111F;
+    }
+    .app-header .logo img{
+      width: 100%;
+      height: 100%;
+      object-fit: contain;       /* preserva proporção */
+      display: block;
+    }
+
+    .leaflet-container .leaflet-tile {
+    filter: contrast(0.96) saturate(0.92);
+  }

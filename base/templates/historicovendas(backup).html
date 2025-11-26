@@ -1,0 +1,236 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Histórico de Vendas - SynapseLog{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/historicovendas.css') }}">
+{% endblock %}
+
+{% block content %}
+        <div class="page-header">
+            <h1>📈 Histórico de Vendas</h1>
+            <p>Importe e gerencie seus dados de vendas em formato CSV ou Excel</p>
+        </div>
+        
+        <div class="import-card">
+            <h3 style="margin-top: 0; color: var(--text); margin-bottom: 24px;">
+                📤 Importar Dados de Vendas
+            </h3>
+            
+            <form method="post" action="{{ url_for('main.historicovendas') }}" enctype="multipart/form-data" id="import-form">
+                {{ csrf_token() if csrf_token is defined else "" }}
+                
+                <div class="form-group">
+                    <label for="file-input" class="form-label">
+                        📁 Selecione o arquivo (CSV / XLSX)
+                    </label>
+                    <input class="form-input" type="file" id="file-input" name="file" accept=".csv, .xls, .xlsx" required>
+                    <div class="form-text">
+                        Formatos suportados: CSV, XLS, XLSX. Tamanho máximo: 10MB
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="delimiter" class="form-label">
+                        🔧 Delimitador (apenas para CSV)
+                    </label>
+                    <select id="delimiter" class="form-select">
+                        <option value=",">Vírgula (,)</option>
+                        <option value=";">Ponto e vírgula (;)</option>
+                        <option value="\t">Tab (\t)</option>
+                    </select>
+                    <div class="form-text">
+                        Escolha o separador usado no seu arquivo CSV
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="preview-btn" class="btn btn-secondary">
+                        <span class="btn-text text">👁️ Visualizar Dados</span>
+                        <span class="circle"></span>
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="importBtn">
+                        <span class="btn-text text">📊 Importar para Sistema</span>
+                        <div class="honeycomb">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <span class="circle"></span>
+                    </button>
+                    <a href="{{ url_for('main.baixar_modelo_historico') }}" class="btn btn-success">
+                        <span class="btn-text text">📥 Baixar Modelo Excel</span>
+                        <span class="circle"></span>
+                    </a>
+                </div>
+
+                <div class="form-text" style="margin-top: 16px;">
+                    💡 <strong>Dica:</strong> Use "Visualizar Dados" para conferir o formato antes de importar para o sistema.
+                </div>
+            </form>
+        </div>
+
+        <div class="history-card">
+            <div class="card-header">
+                📋 Dados Atuais no Sistema
+            </div>
+            
+            <div class="table-container" id="history-window">
+                {% if sales %}
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                {% for col in sales[0].keys() %}
+                                    <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in sales %}
+                                <tr>
+                                    {% for value in row.values() %}
+                                        <td>{{ value }}</td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-muted">
+                        📊 Nenhum dado disponível no momento<br>
+                        Importe um arquivo para visualizar os registros aqui
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+    // Preview CSV localmente antes de enviar
+    function parseCSV(text, delimiter) {
+        const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim() !== '');
+        const rows = lines.map(line => {
+            // split respecting simple quoted values
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"' ) {
+                    if (inQuotes && line[i+1] === '"') { // escaped quote
+                        current += '"'; i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (ch === delimiter && !inQuotes) {
+                    values.push(current);
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
+            values.push(current);
+            return values;
+        });
+        return rows;
+    }
+
+    function buildTableFromRows(rows) {
+        if (!rows || rows.length === 0) {
+            return '<div class="text-muted">📄 Arquivo vazio ou formato inválido</div>';
+        }
+        
+        const headers = rows[0];
+        let html = '<table class="table"><thead><tr>';
+        headers.forEach(h => html += `<th>${escapeHtml(h)}</th>`);
+        html += '</tr></thead><tbody>';
+        
+        const maxRows = Math.min(rows.length - 1, 100); // Limita preview a 100 linhas
+        for (let r = 1; r <= maxRows; r++) {
+            const row = rows[r];
+            html += '<tr>';
+            for (let c = 0; c < headers.length; c++) {
+                html += `<td>${escapeHtml(row[c] ?? '')}</td>`;
+            }
+            html += '</tr>';
+        }
+        
+        if (rows.length > 101) {
+            html += `<tr><td colspan="${headers.length}" style="text-align: center; color: #6c757d; font-style: italic;">... e mais ${rows.length - 101} linhas</td></tr>`;
+        }
+        
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    document.getElementById('preview-btn').addEventListener('click', function () {
+        const input = document.getElementById('file-input');
+        const delimiter = document.getElementById('delimiter').value === '\\t' ? '\t' : document.getElementById('delimiter').value;
+        
+        if (!input.files || !input.files[0]) {
+            alert('⚠️ Selecione um arquivo primeiro.');
+            return;
+        }
+        
+        const file = input.files[0];
+        const previewBtn = this;
+        const originalText = previewBtn.querySelector('.btn-text').textContent;
+        
+        // Desabilita botão durante processamento
+        previewBtn.disabled = true;
+        previewBtn.querySelector('.btn-text').textContent = 'Processando...';
+        
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const text = e.target.result;
+            try {
+                const rows = parseCSV(text, delimiter);
+                const html = buildTableFromRows(rows);
+                document.getElementById('history-window').innerHTML = html;
+            } catch (err) {
+                document.getElementById('history-window').innerHTML = 
+                    '<div class="text-danger">❌ Erro ao processar o arquivo: ' + escapeHtml(err.message) + '</div>';
+            } finally {
+                previewBtn.disabled = false;
+                previewBtn.querySelector('.btn-text').textContent = originalText;
+            }
+        };
+        
+        reader.onerror = function() {
+            document.getElementById('history-window').innerHTML = 
+                '<div class="text-danger">❌ Erro ao ler o arquivo</div>';
+            previewBtn.disabled = false;
+            previewBtn.querySelector('.btn-text').textContent = originalText;
+        };
+        
+        // Para arquivos XLSX, você precisaria de uma biblioteca como SheetJS no cliente
+        // Por enquanto, só funciona com CSV
+        if (file.name.toLowerCase().endsWith('.csv')) {
+            reader.readAsText(file, 'UTF-8');
+        } else {
+            document.getElementById('history-window').innerHTML = 
+                '<div class="text-muted">📊 Preview disponível apenas para arquivos CSV.<br>Para arquivos Excel, importe diretamente para o sistema.</div>';
+            previewBtn.disabled = false;
+            previewBtn.querySelector('.btn-text').textContent = originalText;
+        }
+    });
+
+    // Feedback visual no form de upload
+    document.getElementById('import-form').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('importBtn');
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+    });
+    </script>
+{% endblock %}

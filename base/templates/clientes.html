@@ -1,0 +1,508 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Clientes - SynapseLog{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator.min.css">
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--accent);
+    }
+    
+    .stat-label {
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    
+    .upload-section {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 24px;
+    }
+    
+    .table-toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    #clients-table {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+    }
+    
+    .tabulator {
+        background: transparent;
+        border: none;
+    }
+    
+    .tabulator-header {
+        background: #ffffff !important;
+        border-bottom: 2px solid var(--border);
+    }
+    
+    .tabulator-col {
+        background: #ffffff !important;
+        border-right: 1px solid var(--border);
+    }
+    
+    .tabulator-col-title {
+        color: #000000;
+        font-weight: 600;
+        text-align: center;
+    }
+    
+    .tabulator-row {
+        background: #374151 !important;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    /* Remove zebra striping - todas as linhas com mesma cor (azul mais escuro) */
+    .tabulator-row.tabulator-row-even,
+    .tabulator-row.tabulator-row-odd {
+        background: #374151 !important;
+    }
+    
+    .tabulator-row:hover {
+        background: var(--border) !important;
+    }
+    
+    .tabulator-cell {
+        color: var(--text);
+    }
+    
+    .delete-btn {
+        background: var(--danger);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+    
+    .delete-btn:hover {
+        background: #e53e3e;
+    }
+    
+    .action-btn {
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 600;
+        transition: all 0.2s;
+        color: white;
+        white-space: nowrap;
+    }
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    .btn-details {
+        background: #3b82f6;
+    }
+    .btn-details:hover {
+        background: #2563eb;
+    }
+    .btn-edit {
+        background: #10b981;
+    }
+    .btn-edit:hover {
+        background: #059669;
+    }
+    .btn-history {
+        background: #8b5cf6;
+    }
+    .btn-history:hover {
+        background: #7c3aed;
+    }
+    .btn-delete {
+        background: #ef4444;
+    }
+    .btn-delete:hover {
+        background: #dc2626;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>👥 Gestão de Clientes</h1>
+    <p>Gerencie seus clientes e faça upload de arquivos Excel</p>
+</div>
+
+{% if stats %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.total_clientes or 0 }}</div>
+        <div class="stat-label">Clientes Cadastrados</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ stats.total_localizacoes or 0 }}</div>
+        <div class="stat-label">Localizações Mapeadas</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">
+            {% if stats.ultimo_upload %}
+                {{ stats.ultimo_upload.timestamp.strftime('%d/%m') }}
+            {% else %}
+                --
+            {% endif %}
+        </div>
+        <div class="stat-label">Último Upload</div>
+    </div>
+</div>
+{% endif %}
+
+<div class="upload-section">
+    <div>
+        <div class="table-toolbar">
+            <input id="table-search" type="search" placeholder="Buscar clientes..." style="flex:1;" />
+            <button id="addClientBtn" class="btn btn-success">+ Adicionar Cliente</button>
+            <button id="exportCsv" class="btn btn-secondary">Export CSV</button>
+            <button id="refreshBtn" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="clients-table"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0;">Upload de Clientes</h3>
+        <form id="uploadForm" action="{{ url_for('main.clientes') }}" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" id="fileInput" accept=".xlsx" required />
+            <input type="hidden" name="user_id" value="{{ session.get('user_id','anon') }}" />
+            <div style="margin-top:16px;display:flex;gap:10px;">
+                <button type="submit" class="btn btn-primary" id="uploadBtn" style="flex:1;">
+                    <span class="btn-text">📤 Enviar</span>
+                    <div class="honeycomb">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </button>
+            </div>
+        </form>
+        <div id="status" style="margin-top:12px;display:none;padding:12px;border-radius:8px;font-weight:500;"></div>
+    </div>
+</div>
+
+<!-- Modal para adicionar cliente -->
+<div id="addClientModal" style="display:none;
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.7);
+z-index:9999;align-items:center;
+justify-content:center;">
+    <div style="background:var(--card-bg);
+    padding:30px;border-radius:12px;
+    width:90%;max-width:500px;
+    border:1px solid var(--border);">
+        <h3 style="margin-top:0;color:var(--text);">Adicionar Novo Cliente</h3>
+        <form id="addClientForm">
+            <div style="margin-bottom:16px;">
+                <label>Nome do Cliente:</label>
+                <input type="text" name="name_client" required />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Cidade:</label>
+                <input type="text" name="cidade" required />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Estado:</label>
+                <input type="text" name="estado" required maxlength="2" placeholder="Ex: SP, RJ, MG" />
+            </div>
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button type="submit" class="btn btn-success" style="flex:1;">Salvar</button>
+                <button type="button" id="closeModal" class="btn btn-secondary" style="flex:1;">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal de Detalhes do Cliente -->
+<div id="detalhesModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);padding:30px;border-radius:12px;width:90%;max-width:600px;border:1px solid var(--border);">
+        <h3 style="margin-top:0;color:var(--text);">Detalhes do Cliente</h3>
+        <div id="detalhes-content"></div>
+    </div>
+</div>
+
+<!-- Modal de Edição do Cliente -->
+<div id="editarModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);padding:30px;border-radius:12px;width:90%;max-width:600px;border:1px solid var(--border);">
+        <h3 style="margin-top:0;color:var(--text);">Editar Cliente</h3>
+        <div id="editar-content"></div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+<script>
+(function(){
+    const userId = "{{ session.get('user_id', 'anon') }}";
+
+    async function loadScript(src){
+        return new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s);
+        });
+    }
+
+    async function initTable(){
+        try{
+            const table = new Tabulator('#clients-table', {
+                layout:'fitDataStretch',
+                movableColumns:true,
+                height:'520px',
+                pagination:'local',
+                paginationSize:25,
+                placeholder:'Nenhum cliente encontrado',
+                tooltips:true,
+                reactiveData:true,
+                columns:[
+                    {title:'Cliente', field:'name_client', headerFilter:'input', hozAlign:'left', formatter:'plaintext'},
+                    {title:'Cidade', field:'cidade', headerFilter:'input', width:140},
+                    {title:'Estado', field:'estado', headerFilter:'input', width:100},
+                    {title:'Criado Em', field:'created_at', headerFilter:'input', width:150, sorter:'date', formatter:function(cell){
+                        const v = cell.getValue(); return v? new Date(v).toLocaleString():'';
+                    }},
+                    {title:'Ações', field:'actions', width:180, hozAlign:'center', headerSort:false, formatter:function(cell){
+                        const hash = cell.getRow().getData().hash_client;
+                        return `
+                            <button class="action-btn btn-details" title="Detalhes" onclick="detalhesCliente('${hash}')">Detalhes</button>
+                            <button class="action-btn btn-edit" title="Editar" onclick="editarCliente('${hash}')">Editar</button>
+                            <button class="action-btn btn-history" title="Histórico" onclick="historicoCliente('${hash}')">Histórico</button>
+                            <button class="action-btn btn-delete" title="Excluir" onclick="excluirCliente('${hash}')">Excluir</button>
+                        `;
+                    }}
+                ],
+                rowFormatter:function(row){
+                    const el = row.getElement();
+                    el.style.transition = 'background 0.15s';
+                }
+            });
+
+            async function loadData(){
+                const resp = await fetch(`{{ url_for('main.clientes') }}?action=get&user_id=${encodeURIComponent(userId)}`);
+                if (!resp.ok) return;
+                const json = await resp.json();
+                if (!json.success) return;
+                const clients = json.clients || [];
+                clients.forEach(c=> c.points_count = (c.points? c.points.length: 0));
+                table.setData(clients);
+            }
+            
+            window.reloadClientsTable = loadData;
+
+            document.getElementById('refreshBtn').addEventListener('click', loadData);
+            document.getElementById('table-search').addEventListener('input', function(e){
+                const v = e.target.value;
+                table.setFilter([
+                    [{field:'name_client', type:'like', value:v}, {field:'hash_client', type:'like', value:v}]
+                ]);
+            });
+
+            document.getElementById('exportCsv').addEventListener('click', function(){
+                table.download('csv', 'clientes_export.csv');
+            });
+
+            // Event delegation for delete buttons
+            document.getElementById('clients-table').addEventListener('click', async function(e){
+                if(e.target.classList.contains('delete-btn')){
+                    const hash = e.target.getAttribute('data-hash');
+                    if(!confirm('Deseja realmente excluir este cliente?')) return;
+                    
+                    try{
+                        const resp = await fetch(`{{ url_for('main.clientes') }}?action=delete`, {
+                            method: 'DELETE',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({hash_client: hash, user_id: userId})
+                        });
+                        const result = await resp.json();
+                        if(result.success){
+                            await loadData();
+                            alert('Cliente excluído com sucesso!');
+                        } else {
+                            alert('Erro ao excluir: ' + (result.error || 'desconhecido'));
+                        }
+                    }catch(err){
+                        console.error(err);
+                        alert('Erro ao excluir cliente');
+                    }
+                }
+            });
+
+            await loadData();
+        }catch(e){
+            console.error('Erro inicializando tabela', e);
+        }
+    }
+
+    // Modal handlers
+    const modal = document.getElementById('addClientModal');
+    document.getElementById('addClientBtn').addEventListener('click', function(){
+        modal.style.display = 'flex';
+    });
+    document.getElementById('closeModal').addEventListener('click', function(){
+        modal.style.display = 'none';
+        document.getElementById('addClientForm').reset();
+    });
+
+    // Add client form submission
+    document.getElementById('addClientForm').addEventListener('submit', async function(e){
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {
+            name_client: formData.get('name_client'),
+            cidade: formData.get('cidade'),
+            estado: formData.get('estado').toUpperCase(),
+            user_id: userId
+        };
+
+        try{
+            const resp = await fetch(`{{ url_for('main.clientes') }}?action=add`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+            const result = await resp.json();
+            if(result.success){
+                modal.style.display = 'none';
+                e.target.reset();
+                if(window.reloadClientsTable) window.reloadClientsTable();
+                alert('Cliente adicionado com sucesso!');
+            } else {
+                alert('Erro ao adicionar: ' + (result.error || 'desconhecido'));
+            }
+        }catch(err){
+            console.error(err);
+            alert('Erro ao adicionar cliente');
+        }
+    });
+
+    // Funções dos botões de ação (igual histórico de vendas)
+    window.detalhesCliente = function(hash){
+        // Buscar dados do cliente na tabela
+        const table = window.Tabulator.findTable('#clients-table')[0];
+        const cliente = table.getData().find(c => c.hash_client === hash);
+        if(!cliente) return alert('Cliente não encontrado!');
+        // Exemplo: abrir modal de detalhes
+        const modal = document.getElementById('detalhesModal');
+        if(!modal) return alert('Modal de detalhes não encontrado!');
+        const content = document.getElementById('detalhes-content');
+        content.innerHTML = `
+            <div style="color: var(--text);">
+                <h3 style="color: var(--accent);">Cliente: ${cliente.name_client}</h3>
+                <p><strong>Cidade:</strong> ${cliente.cidade}</p>
+                <p><strong>Estado:</strong> ${cliente.estado}</p>
+                <p><strong>Criado em:</strong> ${cliente.created_at ? new Date(cliente.created_at).toLocaleString('pt-BR') : 'N/A'}</p>
+                <p><strong>Hash:</strong> ${cliente.hash_client}</p>
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-secondary" onclick="fecharModal('detalhesModal')">Fechar</button>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    };
+
+    window.editarCliente = async function(hash){
+        // Buscar dados do cliente na tabela
+        const table = window.Tabulator.findTable('#clients-table')[0];
+        const cliente = table.getData().find(c => c.hash_client === hash);
+        if(!cliente) return alert('Cliente não encontrado!');
+        // Exemplo: abrir modal de edição
+        const modal = document.getElementById('editarModal');
+        if(!modal) return alert('Modal de edição não encontrado!');
+        const content = document.getElementById('editar-content');
+        content.innerHTML = `
+            <form id="form-editar-cliente">
+                <label>Nome: <input type="text" name="name_client" value="${cliente.name_client}" required></label><br>
+                <label>Cidade: <input type="text" name="cidade" value="${cliente.cidade}" required></label><br>
+                <label>Estado: <input type="text" name="estado" value="${cliente.estado}" required></label><br>
+                <input type="hidden" name="hash_client" value="${cliente.hash_client}">
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn btn-success">Salvar</button>
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal('editarModal')">Cancelar</button>
+                </div>
+            </form>
+        `;
+        modal.style.display = 'flex';
+    };
+
+    // Função para fechar modais
+    window.fecharModal = function(modalId) {
+        const modal = document.getElementById(modalId);
+        if(modal) modal.style.display = 'none';
+    }
+
+    window.excluirCliente = async function(hash){
+        if(!confirm('Deseja realmente excluir este cliente?')) return;
+        try{
+            const resp = await fetch(`{{ url_for('main.clientes') }}?action=delete`, {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({hash_client: hash, user_id: userId})
+            });
+            const result = await resp.json();
+            if(result.success){
+                if(window.reloadClientsTable) window.reloadClientsTable();
+                alert('Cliente excluído com sucesso!');
+            } else {
+                alert('Erro ao excluir: ' + (result.error || 'desconhecido'));
+            }
+        }catch(err){
+            console.error(err);
+            alert('Erro ao excluir cliente');
+        }
+    };
+
+    window.historicoCliente = function(hash){
+        // Busca o nome do cliente pelo hash
+        const table = window.Tabulator.findTable('#clients-table')[0];
+        const cliente = table.getData().find(c => c.hash_client === hash);
+        if(!cliente) return alert('Cliente não encontrado!');
+        // Redireciona para página de histórico de vendas filtrando pelo nome do cliente
+        window.location.href = "{{ url_for('main.historicovendas') }}?search=" + encodeURIComponent(cliente.name_client);
+    };
+
+    initTable();
+
+    // Ativa loader no botão de upload
+   document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    // Não chame e.preventDefault() aqui!
+    const uploadBtn = document.getElementById('uploadBtn');
+    uploadBtn.classList.add('loading');
+    // O submit padrão vai acontecer normalmente
+});
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,394 @@
+body {body {
+
+    font-family: Arial, sans-serif;    font-family: Arial, sans-serif;
+
+    margin: 0;    margin: 0;
+
+    background: #f4f4f4;    background: #f4f4f4;
+
+    min-height: 100vh;    min-height: 100vh;
+
+}}
+
+
+
+header {header {
+
+    background: #2c3e50;    background: #2c3e50;
+
+    color: #fff;    color: #fff;
+
+    padding: 20px 0;    padding: 20px 0;
+
+    display: flex;    display: flex;
+
+    align-items: center;    align-items: center;
+
+    justify-content: center;    justify-content: center;
+
+}}
+
+
+
+.logo {.logo {
+
+    height: 50px;    height: 50px;
+
+    margin-right: 20px;    margin-right: 20px;
+
+}}
+
+
+
+.system-name {.system-name {
+
+    font-size: 2rem;    font-size: 2rem;
+
+    font-weight: bold;    font-weight: bold;
+
+}}
+
+
+
+.container {.container {
+
+    text-align: center;    text-align: center;
+
+    margin-top: 40px;    margin-top: 40px;
+
+    padding: 0 20px;    padding: 0 20px;
+
+    max-width: 800px;    max-width: 800px;
+
+    margin-left: auto;    margin-left: auto;
+
+    margin-right: auto;    margin-right: auto;
+
+}}
+
+
+
+.welcome-section {.welcome-section {
+
+    margin-bottom: 40px;    margin-bottom: 40px;
+
+}}
+
+
+
+.welcome-section h1 {.welcome-section h1 {
+
+    font-size: 2.5rem;    font-size: 2.5rem;
+
+    color: #2c3e50;    color: #2c3e50;
+
+    margin-bottom: 10px;    margin-bottom: 10px;
+
+}}
+
+
+
+.subtitle {.subtitle {
+
+    font-size: 1.2rem;    font-size: 1.2rem;
+
+    color: #7f8c8d;    color: #7f8c8d;
+
+    margin-bottom: 20px;    margin-bottom: 20px;
+
+}}
+
+
+
+.description {.description {
+
+    font-size: 1rem;    font-size: 1rem;
+
+    color: #5a5a5a;    color: #5a5a5a;
+
+    line-height: 1.6;    line-height: 1.6;
+
+    max-width: 600px;    max-width: 600px;
+
+    margin: 0 auto;    margin: 0 auto;
+
+}}
+
+
+
+/* Mensagens Flash *//* Mensagens Flash */
+
+.flash-messages {.flash-messages {
+
+    margin: 20px 0;    margin: 20px 0;
+
+}}
+
+
+
+.alert {.alert {
+
+    padding: 12px 16px;    padding: 12px 16px;
+
+    border-radius: 4px;    border-radius: 4px;
+
+    margin-bottom: 10px;    margin-bottom: 10px;
+
+    font-size: 14px;    font-size: 14px;
+
+    max-width: 500px;    max-width: 500px;
+
+    margin-left: auto;    margin-left: auto;
+
+    margin-right: auto;    margin-right: auto;
+
+}}
+
+
+
+.alert-success {.alert-success {
+
+    background: #d4edda;    background: #d4edda;
+
+    color: #155724;    color: #155724;
+
+    border: 1px solid #c3e6cb;    border: 1px solid #c3e6cb;
+
+}}
+
+
+
+.alert-danger {.alert-danger {
+
+    background: #f8d7da;    background: #f8d7da;
+
+    color: #721c24;    color: #721c24;
+
+    border: 1px solid #f5c6cb;    border: 1px solid #f5c6cb;
+
+}}
+
+
+
+.alert-info {.alert-info {
+
+    background: #d1ecf1;    background: #d1ecf1;
+
+    color: #0c5460;    color: #0c5460;
+
+    border: 1px solid #bee5eb;    border: 1px solid #bee5eb;
+
+}}
+
+
+
+/* Botões de ação *//* Botões de ação */
+
+.action-buttons {.action-buttons {
+
+    margin: 40px 0;    margin: 40px 0;
+
+    display: flex;    display: flex;
+
+    gap: 20px;    gap: 20px;
+
+    justify-content: center;    justify-content: center;
+
+    flex-wrap: wrap;    flex-wrap: wrap;
+
+}}
+
+
+
+.btn {.btn {
+
+    display: inline-block;    display: inline-block;
+
+    padding: 15px 40px;    padding: 15px 40px;
+
+    text-decoration: none;    text-decoration: none;
+
+    border-radius: 6px;    border-radius: 6px;
+
+    font-size: 1.1rem;    font-size: 1.1rem;
+
+    font-weight: 500;    font-weight: 500;
+
+    transition: all 0.3s ease;    transition: all 0.3s ease;
+
+    border: none;    border: none;
+
+    cursor: pointer;    cursor: pointer;
+
+    min-width: 160px;    min-width: 160px;
+
+}}
+
+
+
+.btn-primary {.btn-primary {
+
+    background: #2980b9;    background: #2980b9;
+
+    color: #fff;    color: #fff;
+
+}}
+
+
+
+.btn-primary:hover {.btn-primary:hover {
+
+    background: #21618c;    background: #21618c;
+
+    transform: translateY(-2px);    transform: translateY(-2px);
+
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+
+}}
+
+
+
+.btn-secondary {.btn-secondary {
+
+    background: #95a5a6;    background: #95a5a6;
+
+    color: #fff;    color: #fff;
+
+}}
+
+
+
+.btn-secondary:hover {.btn-secondary:hover {
+
+    background: #7f8c8d;    background: #7f8c8d;
+
+    transform: translateY(-2px);    transform: translateY(-2px);
+
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+
+}}
+
+
+
+/* Seção de funcionalidades *//* Seção de funcionalidades */
+
+.features {.features {
+
+    background: #fff;    background: #fff;
+
+    padding: 30px;    padding: 30px;
+
+    border-radius: 8px;    border-radius: 8px;
+
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+    margin-top: 40px;    margin-top: 40px;
+
+    text-align: left;    text-align: left;
+
+    max-width: 500px;    max-width: 500px;
+
+    margin-left: auto;    margin-left: auto;
+
+    margin-right: auto;    margin-right: auto;
+
+}}
+
+
+
+.features h3 {.features h3 {
+
+    color: #2c3e50;    color: #2c3e50;
+
+    text-align: center;    text-align: center;
+
+    margin-bottom: 20px;    margin-bottom: 20px;
+
+    font-size: 1.5rem;    font-size: 1.5rem;
+
+}}
+
+
+
+.features ul {.features ul {
+
+    list-style: none;    list-style: none;
+
+    padding: 0;    padding: 0;
+
+}}
+
+
+
+.features li {.features li {
+
+    padding: 10px 0;    padding: 10px 0;
+
+    font-size: 1rem;    font-size: 1rem;
+
+    color: #5a5a5a;    color: #5a5a5a;
+
+    border-bottom: 1px solid #ecf0f1;    border-bottom: 1px solid #ecf0f1;
+
+}}
+
+
+
+.features li:last-child {.features li:last-child {
+
+    border-bottom: none;    border-bottom: none;
+
+}}
+
+
+
+/* Responsividade *//* Responsividade */
+
+@media (max-width: 768px) {@media (max-width: 768px) {
+
+    .welcome-section h1 {    .welcome-section h1 {
+
+        font-size: 2rem;        font-size: 2rem;
+
+    }    }
+
+        
+
+    .action-buttons {    .action-buttons {
+
+        flex-direction: column;        flex-direction: column;
+
+        align-items: center;        align-items: center;
+
+    }    }
+
+        
+
+    .btn {    .btn {
+
+        width: 100%;        width: 100%;
+
+        max-width: 300px;        max-width: 300px;
+
+    }    }
+
+}}
+    .login-btn {
+            font-size: 1.1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: background 0.2s;
+        }
+
+        .login-btn:hover {
+            background: #1abc9c;
+        }
+
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1200; }
+        .modal-backdrop.show { display: flex; }
+        .modal-panel { width: 360px; max-width: calc(100% - 40px); background: #0f1720; color: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 10px 30px rgba(2,6,23,0.6); }
+        .modal-panel h3 { margin:0 0 12px; font-size:18px; }
+        .modal-panel input{ width:100%; padding:8px 10px; margin:8px 0; border-radius:6px; border:1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); color:#fff; }
+        .modal-actions{ display:flex; gap:8px; justify-content: flex-end; margin-top:8px; }
+        .modal-close{ position:absolute; right:12px; top:8px; background:transparent;border:none;color:#fff;font-size:18px; cursor:pointer; }

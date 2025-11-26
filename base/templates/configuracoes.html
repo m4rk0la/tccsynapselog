@@ -1,0 +1,95 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Configurações - SynapseLog{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1>⚙️ Configurações</h1>
+    <p>Gerencie as configurações do sistema e sua conta</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:24px;">
+    <!-- Alteração de Senha -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🔒 Alterar Senha</h3>
+        </div>
+        <form method="POST" action="{{ url_for('main.configuracoes') }}">
+            <input type="hidden" name="action" value="change_password">
+            <div style="margin-bottom:16px;">
+                <label>Senha Atual:</label>
+                <input type="password" name="current_password" required />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Nova Senha:</label>
+                <input type="password" name="new_password" required />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Confirmar Nova Senha:</label>
+                <input type="password" name="confirm_password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Alterar Senha</button>
+        </form>
+    </div>
+
+    <!-- Alteração de Email -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📧 Alterar Email</h3>
+        </div>
+        <form method="POST" action="{{ url_for('main.configuracoes') }}">
+            <input type="hidden" name="action" value="change_email">
+            <div style="margin-bottom:16px;">
+                <label>Email Atual:</label>
+                <input type="email" value="{{ user_email }}" disabled />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Novo Email:</label>
+                <input type="email" name="new_email" required />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Senha para Confirmação:</label>
+                <input type="password" name="password" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Alterar Email</button>
+        </form>
+    </div>
+
+    <!-- Informações da Conta -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">👤 Informações da Conta</h3>
+        </div>
+        <div style="padding:8px 0;">
+            <div style="margin-bottom:16px;">
+                <label>ID do Usuário:</label>
+                <input type="text" value="{{ session.get('user_id', 'Não autenticado') }}" disabled />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Data de Cadastro:</label>
+                <input type="text" value="01/10/2025" disabled />
+            </div>
+            <div style="margin-bottom:16px;">
+                <label>Último Acesso:</label>
+                <input type="text" value="Agora" disabled />
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Perigo -->
+<div class="card" style="margin-top:24px;border-color:var(--danger);">
+    <div class="card-header">
+        <h3 class="card-title" style="color:var(--danger);">⚠️ Zona de Perigo</h3>
+    </div>
+    <p style="color:var(--text-muted);margin-bottom:16px;">
+        Ações irreversíveis que afetam permanentemente sua conta e dados.
+    </p>
+    <div style="display:flex;gap:12px;">
+        <button class="btn btn-danger">Limpar Todos os Dados</button>
+        <button class="btn btn-danger">Excluir Conta</button>
+    </div>
+</div>
+
+{% endblock %}

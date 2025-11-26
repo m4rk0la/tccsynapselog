@@ -1,0 +1,1114 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Regiões de Visita - SynapseLog{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+    /* Fix para ícones do Leaflet Draw - Ícones melhorados e mais visíveis */
+    .leaflet-draw-draw-polygon {
+        background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"%3E%3Cpath d="M 15 6 L 8 12 L 10 22 L 20 22 L 22 12 Z" fill="none" stroke="%23555" stroke-width="2.5" stroke-linejoin="round"/%3E%3Ccircle cx="15" cy="6" r="2" fill="%23555"/%3E%3Ccircle cx="8" cy="12" r="2" fill="%23555"/%3E%3Ccircle cx="10" cy="22" r="2" fill="%23555"/%3E%3Ccircle cx="20" cy="22" r="2" fill="%23555"/%3E%3Ccircle cx="22" cy="12" r="2" fill="%23555"/%3E%3C/svg%3E') !important;
+        background-size: 22px 22px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    
+    .leaflet-draw-draw-rectangle {
+        background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"%3E%3Crect x="7" y="9" width="16" height="12" fill="none" stroke="%23555" stroke-width="2.5" rx="1"/%3E%3Ccircle cx="7" cy="9" r="2" fill="%23555"/%3E%3Ccircle cx="23" cy="9" r="2" fill="%23555"/%3E%3Ccircle cx="7" cy="21" r="2" fill="%23555"/%3E%3Ccircle cx="23" cy="21" r="2" fill="%23555"/%3E%3C/svg%3E') !important;
+        background-size: 22px 22px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    
+    .leaflet-draw-draw-circle {
+        background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"%3E%3Ccircle cx="15" cy="15" r="9" fill="none" stroke="%23555" stroke-width="2.5"/%3E%3Ccircle cx="15" cy="15" r="2" fill="%23555"/%3E%3Ccircle cx="24" cy="15" r="2" fill="%23555"/%3E%3C/svg%3E') !important;
+        background-size: 22px 22px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    
+    .leaflet-draw-edit-edit {
+        background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"%3E%3Cpath d="M 22 7 L 23 8 L 14 17 L 13 18 L 12 18 L 12 17 L 13 16 Z" fill="%23555" stroke="%23555" stroke-width="1"/%3E%3Crect x="11" y="16" width="2" height="6" fill="%23555"/%3E%3Cpath d="M 11 22 L 13 22 L 15 24 L 9 24 Z" fill="%23555"/%3E%3Ccircle cx="22.5" cy="7.5" r="2" fill="%23555"/%3E%3C/svg%3E') !important;
+        background-size: 20px 20px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    
+    .leaflet-draw-edit-remove {
+        background-image: url('data:image/svg+xml;charset=UTF-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"%3E%3Cpath d="M 9 9 L 21 21 M 21 9 L 9 21" stroke="%23d32f2f" stroke-width="3" stroke-linecap="round"/%3E%3C/svg%3E') !important;
+        background-size: 20px 20px;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    
+    /* Hover effects para os botões */
+    .leaflet-draw-toolbar a:hover {
+        background-color: rgba(102, 126, 234, 0.1) !important;
+    }
+    
+    /* Map Container */
+    .map-wrapper {
+        position: fixed;
+        top: 0;
+        left: 220px; /* Largura da sidebar */
+        right: 350px; /* Largura do painel lateral */
+        bottom: 0;
+        z-index: 1;
+    }
+    
+    #map {
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* Sidebar do Mapa (Painel Direito) */
+    .map-sidebar {
+        position: fixed;
+        right: 0;
+        top: 0;
+        width: 350px;
+        height: 100vh;
+        background: var(--card-bg);
+        border-left: 1px solid var(--border);
+        padding: 24px;
+        overflow-y: auto;
+        z-index: 2;
+    }
+    
+    .map-sidebar h3 {
+        margin: 0 0 12px 0;
+        color: var(--text);
+        font-size: 1.3rem;
+    }
+    
+    .map-sidebar p {
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    
+    .map-sidebar h4 {
+        margin: 20px 0 12px 0;
+        color: var(--text);
+        font-size: 1rem;
+    }
+    
+    /* Features List - Expandida */
+    .features-list {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        max-height: calc(100vh - 320px); /* Altura maior para mostrar mais áreas */
+        overflow-y: auto;
+        background: var(--darker-bg);
+        margin-bottom: 16px;
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .feature-item:hover {
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .feature-item.selected {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: var(--accent);
+    }
+    
+    .feature-item:last-child {
+        border-bottom: none;
+    }
+    
+    .color-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    
+    .feature-title {
+        font-weight: 500;
+        color: var(--text);
+        font-size: 14px;
+    }
+    
+    .feature-subtitle {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+    
+    /* Form Controls */
+    .controls {
+        margin: 20px 0;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 6px;
+        font-size: 13px;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+        background: var(--darker-bg);
+        color: var(--text);
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    
+    .color-input {
+        width: 100%;
+        height: 40px;
+        padding: 2px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        cursor: pointer;
+        background: var(--darker-bg);
+    }
+    
+    /* Buttons */
+    .btn-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    
+    .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        flex: 1;
+    }
+    
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #5568d3;
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #545b62;
+    }
+    
+    .btn-danger {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background: #e53e3e;
+    }
+    
+    /* Selected Info Box */
+    .selected-info {
+        background: var(--darker-bg);
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        margin: 16px 0;
+    }
+    
+    .selected-label {
+        font-size: 11px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
+        font-weight: 600;
+    }
+    
+    .selected-value {
+        font-weight: 500;
+        color: var(--text);
+        font-size: 14px;
+    }
+    
+    /* Export Area */
+    .export-area {
+        margin-top: 20px;
+    }
+    
+    .export-textarea {
+        width: 100%;
+        height: 120px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        resize: vertical;
+        background: var(--darker-bg);
+        color: var(--text-muted);
+    }
+    
+    /* Empty State */
+    .empty-state {
+        padding: 30px 20px;
+        text-align: center;
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    
+    /* Status Messages */
+    .status-message {
+        padding: 12px;
+        border-radius: 6px;
+        margin: 16px 0;
+        font-size: 13px;
+        display: none;
+    }
+    
+    .status-success {
+        background: rgba(72, 187, 120, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(72, 187, 120, 0.3);
+    }
+    
+    .status-error {
+        background: rgba(245, 101, 101, 0.15);
+        color: var(--danger);
+        border: 1px solid rgba(245, 101, 101, 0.3);
+    }
+    
+    /* Leaflet Customization for Dark Theme */
+    .leaflet-container {
+        background: #0f1419;
+    }
+    
+    .leaflet-popup-content-wrapper {
+        background: var(--card-bg);
+        color: var(--text);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .leaflet-popup-tip {
+        background: var(--card-bg);
+    }
+    
+    .leaflet-control-layers {
+        background: var(--card-bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    
+    .leaflet-bar a {
+        background: var(--card-bg);
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .leaflet-bar a:hover {
+        background: var(--border);
+    }
+    
+    .leaflet-draw-toolbar a {
+        background: var(--card-bg);
+        border-color: var(--border);
+    }
+    
+    .leaflet-draw-toolbar a:hover {
+        background: var(--border);
+    }
+    
+    /* Scrollbar Dark Theme */
+    .features-list::-webkit-scrollbar,
+    .map-sidebar::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .features-list::-webkit-scrollbar-track,
+    .map-sidebar::-webkit-scrollbar-track {
+        background: var(--darker-bg);
+    }
+    
+    .features-list::-webkit-scrollbar-thumb,
+    .map-sidebar::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+    }
+    
+    .features-list::-webkit-scrollbar-thumb:hover,
+    .map-sidebar::-webkit-scrollbar-thumb:hover {
+        background: #5a6a7d;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .map-sidebar {
+            width: 300px;
+        }
+        
+        .map-wrapper {
+            right: 300px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .map-wrapper {
+            position: relative;
+            left: 0;
+            right: 0;
+            height: 50vh;
+        }
+        
+        .map-sidebar {
+            position: relative;
+            width: 100%;
+            height: auto;
+            max-height: 50vh;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="map-wrapper">
+    <div id="map"></div>
+</div>
+
+<div class="map-sidebar">
+            <h3>🗺️ Áreas de Visitas</h3>
+            <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                Desenhe polígonos no mapa para delimitar as áreas de visitas da sua equipe
+            </p>
+            
+            <div class="features-list" id="featuresList">
+                <div class="empty-state">
+                    📍 Desenhe formas no mapa para criar áreas de visitas.<br>
+                    As áreas aparecerão aqui para configuração.
+                </div>
+            </div>
+
+            <div class="selected-info">
+                <div class="selected-label">Área Selecionada</div>
+                <div class="selected-value" id="selectedInfo">Nenhuma área selecionada</div>
+            </div>
+
+            <!-- Estatísticas da Área -->
+            <div id="areaStats" style="display: none; background: var(--darker-bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); margin: 16px 0;">
+                <h4 style="margin: 0 0 12px 0; color: var(--text); font-size: 14px; font-weight: 600;">
+                    📊 Estatísticas da Área
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div style="background: var(--card-bg); padding: 10px; border-radius: 6px;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Clientes</div>
+                        <div style="font-size: 20px; font-weight: 600; color: var(--accent);" id="statClientes">-</div>
+                    </div>
+                    <div style="background: var(--card-bg); padding: 10px; border-radius: 6px;">
+                        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Pedidos</div>
+                        <div style="font-size: 20px; font-weight: 600; color: var(--success);" id="statPedidos">-</div>
+                    </div>
+                </div>
+                
+                <div style="background: var(--card-bg); padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">💰 Valor Total</div>
+                    <div style="font-size: 18px; font-weight: 600; color: var(--warning);" id="statValorTotal">-</div>
+                </div>
+                
+                <div style="background: var(--card-bg); padding: 10px; border-radius: 6px; margin-bottom: 12px;">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">📈 Ticket Médio</div>
+                    <div style="font-size: 16px; font-weight: 600; color: var(--info);" id="statTicketMedio">-</div>
+                </div>
+                
+                <div style="background: var(--card-bg); padding: 10px; border-radius: 6px;">
+                    <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">🕐 Última Compra</div>
+                    <div style="font-size: 13px; font-weight: 500; color: var(--text);" id="statUltimaCompra">-</div>
+                </div>
+                
+                <div id="loadingStats" style="display: none; text-align: center; padding: 20px; color: var(--text-muted);">
+                    <div style="margin-bottom: 8px;">⏳</div>
+                    <div style="font-size: 12px;">Carregando dados...</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="form-group">
+                    <label class="form-label" for="nameInput">
+                        📝 Nome da Área
+                    </label>
+                    <input type="text" id="nameInput" class="form-input" placeholder="Ex: Zona Norte, Centro, etc." />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="colorInput">
+                        🎨 Cor da Área
+                    </label>
+                    <input type="color" id="colorInput" class="color-input" value="#667eea" />
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="applyBtn">
+                        ✅ Aplicar
+                    </button>
+                    <button class="btn btn-danger" id="deleteBtn">
+                        🗑️ Excluir
+                    </button>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" id="exportBtn">
+                    💾 Salvar Áreas
+                </button>
+            </div>
+
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script>
+    (function(){
+        // Configuração inicial do mapa (Brasília como padrão)
+        const map = L.map('map').setView([-15.7942, -47.9297], 10);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // FeatureGroup para áreas desenhadas
+        const drawnItems = new L.FeatureGroup().addTo(map);
+
+        // Controle de desenho
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polygon: true,
+                rectangle: true,
+                circle: true,
+                polyline: false,
+                marker: false,
+                circlemarker: false
+            },
+            edit: { 
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+        map.addControl(drawControl);
+
+        // Gerenciamento de áreas
+        const areasMap = new Map();
+        let selectedId = null;
+        const userId = "{{ session.get('user_id', 'anon') }}";
+
+        function generateId() {
+            return 'area-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+        }
+
+        function addAreaToList(id, name, color) {
+            const list = document.getElementById('featuresList');
+            const emptyState = list.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const item = document.createElement('div');
+            item.className = 'feature-item';
+            item.dataset.id = id;
+            item.innerHTML = `
+                <div class="color-box" style="background-color: ${color}"></div>
+                <div style="flex: 1;">
+                    <div class="feature-title">${name}</div>
+                    <div class="feature-subtitle" id="subtitle-${id}">Área de visitas</div>
+                </div>
+            `;
+            item.onclick = () => selectArea(id);
+            list.appendChild(item);
+        }
+
+        function updateListItem(id) {
+            const area = areasMap.get(id);
+            const item = document.querySelector(`.feature-item[data-id="${id}"]`);
+            if (!item || !area) return;
+
+            const colorBox = item.querySelector('.color-box');
+            const color = area.options.color || area.options.fillColor || '#667eea';
+            colorBox.style.backgroundColor = color;
+
+            const title = item.querySelector('.feature-title');
+            title.textContent = area.options.name || `Área ${id}`;
+
+            const subtitle = item.querySelector('.feature-subtitle');
+            if (area.getBounds) {
+                const bounds = area.getBounds();
+                subtitle.textContent = `Área: ${bounds.toBBoxString()}`;
+            }
+        }
+
+        function selectArea(id) {
+            // Remove seleção anterior
+            const prevSelected = document.querySelector('.feature-item.selected');
+            if (prevSelected) prevSelected.classList.remove('selected');
+
+            // Seleciona nova área
+            const item = document.querySelector(`.feature-item[data-id="${id}"]`);
+            if (item) item.classList.add('selected');
+
+            selectedId = id;
+            const area = areasMap.get(id);
+            if (!area) return;
+
+            // Atualiza formulário
+            document.getElementById('selectedInfo').textContent = area.options.name || `Área ${id}`;
+            document.getElementById('nameInput').value = area.options.name || '';
+            
+            const color = area.options.color || area.options.fillColor || '#667eea';
+            document.getElementById('colorInput').value = rgbToHex(color);
+
+            // Foca no mapa
+            if (area.getBounds) {
+                map.fitBounds(area.getBounds());
+            }
+            
+            // Carrega estatísticas da área
+            loadAreaStatistics(id, area);
+        }
+
+        function rgbToHex(color) {
+            if (!color) return '#667eea';
+            if (color.startsWith('#')) return color;
+            
+            const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+            if (match) {
+                const hex = [1, 2, 3].map(i => 
+                    parseInt(match[i]).toString(16).padStart(2, '0')
+                ).join('');
+                return '#' + hex;
+            }
+            return '#667eea';
+        }
+
+        function showStatus(message, type) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status-message status-${type}`;
+            statusEl.style.display = 'block';
+            
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Função para carregar estatísticas da área
+        async function loadAreaStatistics(areaId, area) {
+            const statsContainer = document.getElementById('areaStats');
+            const loadingEl = document.getElementById('loadingStats');
+            
+            // Mostra container de stats
+            statsContainer.style.display = 'block';
+            loadingEl.style.display = 'block';
+            
+            // Esconde stats antigos
+            document.getElementById('statClientes').textContent = '-';
+            document.getElementById('statPedidos').textContent = '-';
+            document.getElementById('statValorTotal').textContent = '-';
+            document.getElementById('statTicketMedio').textContent = '-';
+            document.getElementById('statUltimaCompra').textContent = '-';
+            
+            try {
+                // Pega bounds do polígono
+                if (!area.getBounds) {
+                    loadingEl.style.display = 'none';
+                    return;
+                }
+                
+                const bounds = area.getBounds();
+                const north = bounds.getNorth();
+                const south = bounds.getSouth();
+                const east = bounds.getEast();
+                const west = bounds.getWest();
+                
+                // Busca clientes dentro da área
+                const clientesNaArea = [];
+                
+                // Itera sobre todos os marcadores no mapa
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Marker) {
+                        const latLng = layer.getLatLng();
+                        
+                        // Verifica se o marcador está dentro do polígono
+                        if (area.getBounds().contains(latLng)) {
+                            // Pega o hash do cliente do popup ou options
+                            const hashCliente = layer.options.hashCliente || layer.options.hash_client;
+                            if (hashCliente) {
+                                clientesNaArea.push(hashCliente);
+                            }
+                        }
+                    }
+                });
+                
+                console.log(`📍 Clientes na área "${area.options.name}":`, clientesNaArea);
+                
+                // Se não há clientes na área
+                if (clientesNaArea.length === 0) {
+                    document.getElementById('statClientes').textContent = '0';
+                    document.getElementById('statPedidos').textContent = '0';
+                    document.getElementById('statValorTotal').textContent = 'R$ 0,00';
+                    document.getElementById('statTicketMedio').textContent = 'R$ 0,00';
+                    document.getElementById('statUltimaCompra').textContent = 'Sem dados';
+                    loadingEl.style.display = 'none';
+                    return;
+                }
+                
+                // Busca estatísticas do backend
+                const response = await fetch('{{ url_for("main.get_area_statistics") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        clientes: clientesNaArea
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar estatísticas');
+                }
+                
+                const stats = await response.json();
+                
+                // Atualiza UI com os dados
+                document.getElementById('statClientes').textContent = stats.total_clientes || '0';
+                document.getElementById('statPedidos').textContent = stats.total_pedidos || '0';
+                document.getElementById('statValorTotal').textContent = formatCurrency(stats.valor_total || 0);
+                document.getElementById('statTicketMedio').textContent = formatCurrency(stats.ticket_medio || 0);
+                document.getElementById('statUltimaCompra').textContent = stats.ultima_compra || 'Sem dados';
+                
+                loadingEl.style.display = 'none';
+                
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                document.getElementById('statClientes').textContent = 'Erro';
+                document.getElementById('statPedidos').textContent = 'Erro';
+                document.getElementById('statValorTotal').textContent = 'Erro';
+                document.getElementById('statTicketMedio').textContent = 'Erro';
+                document.getElementById('statUltimaCompra').textContent = 'Erro';
+                loadingEl.style.display = 'none';
+            }
+        }
+        
+        // Função auxiliar para formatar moeda
+        function formatCurrency(value) {
+            if (!value || isNaN(value)) return 'R$ 0,00';
+            return 'R$ ' + parseFloat(value).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Event listeners do mapa
+        map.on(L.Draw.Event.CREATED, function(e) {
+            const layer = e.layer;
+            const id = generateId();
+            const name = `Área ${areasMap.size + 1}`;
+            const color = '#667eea';
+
+            // Configura a área
+            layer.options.name = name;
+            layer.options.id = id;
+            if (layer.setStyle) {
+                layer.setStyle({
+                    color: color,
+                    fillColor: color,
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.3
+                });
+            }
+
+            // Adiciona ao mapa e gerenciamento
+            drawnItems.addLayer(layer);
+            areasMap.set(id, layer);
+            addAreaToList(id, name, color);
+            updateListItem(id);
+
+            // Event listener para seleção
+            layer.on('click', () => selectArea(id));
+        });
+
+        map.on('draw:deleted', function(e) {
+            const layers = e.layers;
+            layers.eachLayer(function(layer) {
+                for (let [id, area] of areasMap.entries()) {
+                    if (area === layer) {
+                        areasMap.delete(id);
+                        const item = document.querySelector(`.feature-item[data-id="${id}"]`);
+                        if (item) item.remove();
+                        
+                        if (selectedId === id) {
+                            selectedId = null;
+                            document.getElementById('selectedInfo').textContent = 'Nenhuma área selecionada';
+                            document.getElementById('nameInput').value = '';
+                        }
+                        break;
+                    }
+                }
+            });
+
+            // Mostra empty state se não há áreas
+            if (areasMap.size === 0) {
+                const list = document.getElementById('featuresList');
+                list.innerHTML = '<div class="empty-state">📍 Desenhe formas no mapa para criar áreas de visitas.<br>As áreas aparecerão aqui para configuração.</div>';
+            }
+        });
+
+        // Botão Aplicar
+        document.getElementById('applyBtn').addEventListener('click', () => {
+            if (!selectedId) {
+                showStatus('❌ Selecione uma área na lista primeiro', 'error');
+                return;
+            }
+
+            const area = areasMap.get(selectedId);
+            if (!area) return;
+
+            const name = document.getElementById('nameInput').value.trim() || `Área ${selectedId}`;
+            const color = document.getElementById('colorInput').value;
+
+            // Atualiza propriedades
+            area.options.name = name;
+            if (area.setStyle) {
+                area.setStyle({
+                    color: color,
+                    fillColor: color,
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.3
+                });
+            }
+
+            updateListItem(selectedId);
+            document.getElementById('selectedInfo').textContent = name;
+            showStatus('✅ Área atualizada com sucesso', 'success');
+        });
+
+        // Botão Excluir
+        document.getElementById('deleteBtn').addEventListener('click', async () => {
+            if (!selectedId) {
+                showStatus('❌ Selecione uma área para excluir', 'error');
+                return;
+            }
+
+            const area = areasMap.get(selectedId);
+            if (!area) return;
+
+            // Verifica se tem dbId (área salva no banco)
+            const dbId = area.options.dbId;
+            
+            // Confirmação
+            if (!confirm(`Tem certeza que deseja excluir "${area.options.name || 'esta área'}"?`)) {
+                return;
+            }
+
+            try {
+                // Se a área está no banco, deleta do servidor
+                if (dbId) {
+                    const response = await fetch(`{{ url_for("main.grupos") }}?id=${dbId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    
+                    if (!result.success) {
+                        showStatus(`❌ ${result.error}`, 'error');
+                        return;
+                    }
+                }
+
+                // Remove do mapa e gerenciamento local
+                drawnItems.removeLayer(area);
+                areasMap.delete(selectedId);
+                
+                const item = document.querySelector(`.feature-item[data-id="${selectedId}"]`);
+                if (item) item.remove();
+
+                // Reset seleção
+                selectedId = null;
+                document.getElementById('selectedInfo').textContent = 'Nenhuma área selecionada';
+                document.getElementById('nameInput').value = '';
+
+                // Mostra empty state se necessário
+                if (areasMap.size === 0) {
+                    const list = document.getElementById('featuresList');
+                    list.innerHTML = '<div class="empty-state">📍 Desenhe formas no mapa para criar áreas de visitas.<br>As áreas aparecerão aqui para configuração.</div>';
+                }
+
+                showStatus('✅ Área excluída com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao excluir área:', error);
+                showStatus('❌ Erro ao excluir área do servidor', 'error');
+            }
+        });
+
+        // Função para construir GeoJSON
+        function buildFeatureCollection() {
+            const features = [];
+            for (let [id, area] of areasMap.entries()) {
+                const geoJson = area.toGeoJSON();
+                geoJson.properties = geoJson.properties || {};
+                geoJson.properties.id = id;
+                geoJson.properties.name = area.options.name || `Área ${id}`;
+                geoJson.properties.color = area.options.color || area.options.fillColor || '#667eea';
+                geoJson.properties.user_id = userId;
+                geoJson.properties.created_at = new Date().toISOString();
+                
+                // Inclui db_id se a área já foi salva no banco
+                if (area.options.dbId) {
+                    geoJson.properties.db_id = area.options.dbId;
+                }
+                
+                features.push(geoJson);
+            }
+            return { type: "FeatureCollection", features };
+        }
+
+        // Botão Salvar
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            if (areasMap.size === 0) {
+                showStatus('❌ Desenhe pelo menos uma área antes de salvar', 'error');
+                return;
+            }
+
+            // Verifica se todas as áreas têm nome configurado
+            let hasUnnamedArea = false;
+            for (let [id, area] of areasMap.entries()) {
+                if (!area.options.name || area.options.name.includes('Área área-')) {
+                    hasUnnamedArea = true;
+                    break;
+                }
+            }
+
+            if (hasUnnamedArea) {
+                const confirm = window.confirm('⚠️ Algumas áreas não têm nome configurado. Deseja continuar mesmo assim?');
+                if (!confirm) return;
+            }
+
+            const featureCollection = buildFeatureCollection();
+            const geoJsonString = JSON.stringify(featureCollection, null, 2);
+
+            console.log('📤 Enviando dados para salvar:', featureCollection);
+
+            try {
+                const response = await fetch('{{ url_for("main.grupos") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: geoJsonString
+                });
+
+                console.log('📥 Resposta do servidor:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('❌ Erro do servidor:', errorText);
+                    throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
+                }
+
+                const result = await response.json();
+                console.log('✅ Resultado:', result);
+                
+                if (result.success) {
+                    const message = result.message || 'Áreas salvas com sucesso!';
+                    showStatus(`✅ ${message}`, 'success');
+                    // Recarrega as áreas após salvar para atualizar os IDs do banco
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    showStatus(`❌ ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                showStatus(`❌ Erro ao conectar com o servidor: ${error.message}`, 'error');
+                
+                // Fallback: download do arquivo
+                const blob = new Blob([geoJsonString], { type: 'application/geo+json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `areas-visitas-${userId}-${Date.now()}.geojson`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        // Carrega áreas existentes do banco de dados
+        async function loadExistingAreas() {
+            try {
+                const uid = encodeURIComponent(userId);
+                const response = await fetch(`{{ url_for("main.grupos") }}?action=get&user_id=${uid}`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                if (!data.success || !data.areas || data.areas.length === 0) {
+                    console.log('Nenhuma área existente encontrada');
+                    return;
+                }
+
+                // Carrega cada área salva
+                data.areas.forEach(areaData => {
+                    try {
+                        const geojson = areaData.geojson_data;
+                        const layer = L.geoJSON(geojson, {
+                            style: {
+                                color: geojson.properties?.color || '#667eea',
+                                fillColor: geojson.properties?.color || '#667eea',
+                                weight: 2,
+                                opacity: 0.8,
+                                fillOpacity: 0.3
+                            }
+                        }).getLayers()[0];
+
+                        if (!layer) return;
+
+                        // Configura propriedades
+                        const id = `area-db-${areaData.id}`;
+                        const name = areaData.group_name || 'Área sem nome';
+                        const color = geojson.properties?.color || '#667eea';
+
+                        layer.options.name = name;
+                        layer.options.id = id;
+                        layer.options.dbId = areaData.id; // ID do banco de dados
+
+                        // Adiciona ao mapa
+                        drawnItems.addLayer(layer);
+                        areasMap.set(id, layer);
+                        addAreaToList(id, name, color);
+                        updateListItem(id);
+
+                        // Event listener para seleção
+                        layer.on('click', () => selectArea(id));
+                    } catch (e) {
+                        console.warn('Erro ao carregar área:', e);
+                    }
+                });
+
+                showStatus(`✅ ${data.areas.length} área(s) carregada(s) do banco de dados`, 'success');
+            } catch (error) {
+                console.log('Erro ao carregar áreas existentes:', error);
+            }
+        }
+
+        // Inicialização - Ativa o carregamento das áreas
+        loadExistingAreas();
+
+        // Cria ícone personalizado de pin vermelho
+        const redPinIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBmaWxsPSIjRUY0NDQ0IiBkPSJNMTYgMEMxMC4wNiAwIDUuMjUgNC44MSA1LjI1IDEwLjc1YzAgOC4wNiAxMC43NSAyOS4yNSAxMC43NSAyOS4yNXMxMC43NS0yMS4xOSAxMC43NS0yOS4yNUMyNi43NSA0LjgxIDIxLjk0IDAgMTYgMHptMCAxNS41Yy0yLjYyIDAtNC43NS0yLjEzLTQuNzUtNC43NVMxMy4zOCA2IDE2IDZzNC43NSAyLjEzIDQuNzUgNC43NVMxOC42MiAxNS41IDE2IDE1LjV6Ii8+PC9zdmc+',
+            iconSize: [10, 15],
+            iconAnchor: [16, 40],
+            popupAnchor: [0, -40]
+        });
+
+        const bluePinIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDMyIDQwIj48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNMTYgMEMxMC4wNiAwIDUuMjUgNC44MSA1LjI1IDEwLjc1YzAgOC4wNiAxMC43NSAyOS4yNSAxMC43NSAyOS4yNXMxMC43NS0yMS4xOSAxMC43NS0yOS4yNUMyNi43NSA0LjgxIDIxLjk0IDAgMTYgMHptMCAxNS41Yy0yLjYyIDAtNC43NS0yLjEzLTQuNzUtNC43NVMxMy4zOCA2IDE2IDZzNC43NSAyLjEzIDQuNzUgNC43NVMxOC42MiAxNS41IDE2IDE1LjV6Ii8+PC9zdmc+',
+            iconSize: [10, 15],
+            iconAnchor: [16, 40],
+            popupAnchor: [0, -40]
+        });
+
+        // Carrega clientes do usuário e plota marcadores
+        async function loadClientsOnMap() {
+            try {
+                const uid = encodeURIComponent(userId);
+                const resp = await fetch(`{{ url_for('main.grupos') }}?action=get&user_id=${uid}`);
+                if (!resp.ok) return;
+                const json = await resp.json();
+                if (!json.success) return;
+
+                const clients = json.clients || [];
+                clients.forEach(client => {
+                    // Cada client pode ter múltiplos pontos
+                    client.points.forEach(c => {
+                        try {
+                            // Usa pin vermelho para clientes normais, azul para pontos do usuário
+                            const icon = c.user_point ? bluePinIcon : redPinIcon;
+                            
+                            const marker = L.marker([c.latitude, c.longitude], {
+                                icon: icon,
+                                hashCliente: client.hash_client,  // Adiciona hash para busca de estatísticas
+                                hash_client: client.hash_client    // Versão alternativa do nome
+                            }).addTo(map);
+
+                            const popupHtml = `
+                                <div style="font-family: Arial, sans-serif;">
+                                    <strong style="color: #667eea; font-size: 14px;">📍 ${client.name_client}</strong><br/>
+                                    <span style="color: #6c757d; font-size: 11px;">${c.user_point ? '🔵 Ponto do Usuário' : '📍 Cliente'}</span>
+                                </div>
+                            `;
+                            marker.bindPopup(popupHtml);
+                        } catch (e) {
+                            console.warn('Erro ao adicionar marcador', e);
+                        }
+                    });
+                });
+            } catch (e) {
+                console.warn('Não foi possível carregar clientes:', e);
+            }
+        }
+
+        // Chama após inicialização do mapa
+        loadClientsOnMap();
+    })();
+</script>
+{% endblock %}

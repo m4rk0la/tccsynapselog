@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Página Inicial - SynapseLog{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/paginainicial.css') }}">
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='img/logomin.png') }}" alt="Logo do SynapseLog" class="logo">
+        <span class="system-name">SynapseLog</span>
+    </header>
+    
+    <main class="container">
+        <div class="welcome-section">
+            <h1>🧠 Bem-vindo ao SynapseLog</h1>
+            <p class="subtitle">Sistema de gerenciamento inteligente</p>
+            <p class="description">
+                Acesse sua conta para começar a utilizar todas as funcionalidades do sistema.
+            </p>
+        </div>
+        
+        <!-- Exibe mensagens flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <div class="action-buttons">
+            <a href="{{ url_for('main.login') }}" class="btn btn-primary">
+                🔐 Fazer Login
+            </a>
+            <a href="{{ url_for('main.registro') }}" class="btn btn-secondary">>
+                📝 Criar Conta
+            </a>
+        </div>
+        
+        <div class="features">
+            <h3>💡 Funcionalidades</h3>
+            <ul>
+                <li>🏢 Gerenciamento de grupos</li>
+                <li>📊 Painel de controle</li>
+                <li>🔒 Sistema seguro de autenticação</li>
+            </ul>
+        </div>
+    </main>
+</body>
+</html>

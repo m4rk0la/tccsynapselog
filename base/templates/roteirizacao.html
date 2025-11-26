@@ -1,0 +1,1378 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Roteirização - SynapseLog{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/roteirizacao.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <h1>🗺️ Roteirização de Vendas</h1>
+        <p>Configure e otimize suas rotas de visitas</p>
+    </div>
+
+    <div class="roteirizacao-container">
+        <!-- PASSO 1: Seleção de Grupos -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-number">1</div>
+                <h2 class="step-title">Selecione os Grupos de Vendas</h2>
+            </div>
+
+            <div class="grupos-grid" id="grupos-grid">
+                <!-- Grupos serão carregados aqui via JavaScript -->
+            </div>
+
+            <div class="alert-info">
+                <span class="alert-icon">ℹ️</span>
+                <span>Você pode selecionar múltiplos grupos. Os clientes dentro das áreas selecionadas serão contabilizados automaticamente.</span>
+            </div>
+        </div>
+
+        <!-- PASSO 2: Configuração de Dias -->
+        <div class="step-card">
+            <div class="step-header">
+                <div class="step-number">2</div>
+                <h2 class="step-title">Configure a Roteirização</h2>
+            </div>
+
+            <div class="dias-section">
+                <label for="dias-input" class="form-label">📅 Número de dias disponíveis:</label>
+                <input 
+                    type="number" 
+                    id="dias-input" 
+                    class="form-input" 
+                    min="1"
+                    max="30" 
+                    value="5" 
+                    placeholder="Ex: 5"
+                >
+                <small style="color: var(--text-muted); font-size: 0.85rem;">Quantos dias de trabalho você tem disponível</small>
+            </div>
+
+            <div class="limite-section" style="margin-top: 20px;">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="enable-limit" checked>
+                    <span class="checkmark"></span>
+                    <span class="checkbox-label-text">🎯 Limitar clientes por dia</span>
+                </label>
+                
+                <div id="limite-input-container" class="limite-input-container">
+                    <label for="max-clients-input" class="form-label">Máximo de clientes por dia:</label>
+                    <input 
+                        type="number" 
+                        id="max-clients-input" 
+                        class="form-input" 
+                        min="1"
+                        max="100" 
+                        value="12" 
+                        placeholder="Ex: 12"
+                    >
+                    <small style="color: var(--text-muted); font-size: 0.85rem;">Grupos que excederem este limite serão divididos automaticamente</small>
+                </div>
+            </div>
+
+            <div class="resumo-section" id="resumo-section">
+                <div class="resumo-card">
+                    <div class="resumo-label">Total de Clientes</div>
+                    <div class="resumo-value" id="total-clientes">0</div>
+                </div>
+
+                <div class="resumo-card">
+                    <div class="resumo-label">Dias de Trabalho</div>
+                    <div class="resumo-value" id="total-dias">5</div>
+                </div>
+
+                <div class="resumo-card">
+                    <div class="resumo-label">Clientes por Dia (Média)</div>
+                    <div class="resumo-value">
+                        <span id="clientes-por-dia">0</span>
+                        <span class="resumo-unit">clientes/dia</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botão Confirmar -->
+            <div style="margin-top: 24px; text-align: center;">
+                <button 
+                    id="btn-confirmar" 
+                    class="btn-primary btn-animated"
+                    onclick="confirmarRoteirizacao()"
+                    disabled
+                >
+                    <svg class="arr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+                    </svg>
+                    <span class="text">Clusterizar</span>
+                    <span class="circle"></span>
+                    <svg class="arr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+                    </svg>
+                </button>
+                
+                <!-- Loader animado -->
+                <div id="loading-container" style="display: none;">
+                    <div class="spinner">
+                        <div class="spinner1"></div>
+                    </div>
+                    <p class="loading-text">Processando roteirização com filtro...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PASSO 3: Resultados dos Clusters -->
+        <div class="step-card" id="resultados-card" style="display: none;">
+            <div class="step-header">
+                <div class="step-number">3</div>
+                <h2 class="step-title">Resultados da Roteirização</h2>
+            </div>
+
+            <div class="alert-info" style="margin-bottom: 20px;">
+                <span class="alert-icon">✓</span>
+                <span id="mensagem-sucesso"></span>
+            </div>
+
+            <!-- Resumo da Roteirização -->
+            <div class="resumo-section" id="resumo-resultado" style="display: none;">
+                <div class="resumo-card">
+                    <div class="resumo-label">Total de Clientes</div>
+                    <div class="resumo-value" id="resultado-clientes">0</div>
+                </div>
+
+                <div class="resumo-card">
+                    <div class="resumo-label">Dias de Trabalho</div>
+                    <div class="resumo-value" id="resultado-dias">0</div>
+                </div>
+
+                <div class="resumo-card">
+                    <div class="resumo-label">Clientes por Dia (Média)</div>
+                    <div class="resumo-value">
+                        <span id="resultado-media">0</span>
+                        <span class="resumo-unit">clientes/dia</span>
+                    </div>
+                </div>
+                
+                <div class="resumo-card" id="resultado-limite-card" style="display: none;">
+                    <div class="resumo-label">Máximo por Dia</div>
+                    <div class="resumo-value">
+                        <span id="resultado-limite">0</span>
+                        <span class="resumo-unit">clientes/dia</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Clusters -->
+            <div class="grupos-resultado-container">
+                <h3 style="color: var(--text); margin: 24px 0 16px; font-size: 1.1rem;">🎯 Clusters Gerados</h3>
+                <div id="grupos-por-dia-container">
+                    <!-- Grupos organizados por dia serão renderizados aqui -->
+                </div>
+            </div>
+
+            <!-- Configuração de Calendarização -->
+            <div class="calendario-config" style="margin-top: 30px;">
+                <h3 style="color: var(--text); margin-bottom: 16px; font-size: 1.1rem;">⚙️ Configurar Calendário</h3>
+                
+                <div class="checkbox-group" style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="checkbox-sabado" class="custom-checkbox">
+                        <span class="checkbox-text">📅 Incluir Sábados</span>
+                    </label>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="checkbox-domingo" class="custom-checkbox">
+                        <span class="checkbox-text">📅 Incluir Domingos</span>
+                    </label>
+                </div>
+
+                <!-- Botão Calendarizar -->
+                <div style="text-align: center;">
+                    <button 
+                        id="btn-calendarizar" 
+                        class="btn-primary btn-animated"
+                        onclick="calendarizar()"
+                    >
+                        <svg class="arr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+                        </svg>
+                        <span class="text">Calendarizar</span>
+                        <span class="circle"></span>
+                        <svg class="arr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M16.1716 10.9999L10.8076 5.63589L12.2218 4.22168L20 11.9999L12.2218 19.778L10.8076 18.3638L16.1716 12.9999H4V10.9999H16.1716Z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PASSO 4: Calendário Interativo -->
+        <div class="step-card" id="calendario-card" style="display: none;">
+            <div class="step-header">
+                <div class="step-number">4</div>
+                <h2 class="step-title">Calendário de Roteirização</h2>
+            </div>
+
+            <div class="alert-info" style="margin-bottom: 20px;">
+                <span class="alert-icon">📆</span>
+                <span>Arraste os clusters para os dias desejados. Clusters são organizados por prioridade (maior score primeiro).</span>
+            </div>
+
+            <!-- Layout Calendário + Inventário -->
+            <div class="calendario-layout">
+                <!-- Calendário -->
+                <div class="calendario-container" id="calendario-container">
+                    <!-- Dias serão gerados aqui -->
+                </div>
+
+                <!-- Inventário de Clusters -->
+                <div class="inventario-container" 
+                     ondrop="dropToInventory(event)"
+                     ondragover="allowDrop(event)"
+                     ondragleave="dragLeave(event)">
+                    <div class="inventario-header">
+                        <h3>📦 Clusters Disponíveis</h3>
+                        <span class="inventario-badge" id="inventario-count">0</span>
+                    </div>
+                    <div class="inventario-list" id="inventario-list">
+                        <!-- Clusters não alocados -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botão Salvar Calendário -->
+            <div class="salvar-calendario-container" style="margin-top: 30px; text-align: center;">
+                <button class="btn-salvar-calendario" onclick="salvarCalendario()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    <span>Salvar Calendário</span>
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Variáveis globais
+        const userId = "{{ session.get('user_id', 'anon') }}";
+        let gruposData = [];
+        let gruposSelecionados = new Set();
+        let clientesPorGrupo = {};
+
+        // Carrega os grupos disponíveis
+        async function carregarGrupos() {
+            try {
+                console.log('🔍 Carregando grupos para roteirização...');
+                console.log('🌐 URL da API:', '/autenticado/roteirizacao/grupos');
+                
+                // USAR ROTA ESPECÍFICA DE ROTEIRIZAÇÃO
+                const response = await fetch('/autenticado/roteirizacao/grupos');
+                
+                console.log('📡 Status da resposta:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('Você precisa estar logado para acessar esta página');
+                    }
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Resposta recebida:', data);
+                console.log('📊 Estrutura dos dados:', {
+                    success: data.success,
+                    total: data.total,
+                    numGrupos: data.grupos ? data.grupos.length : 0
+                });
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Erro ao buscar grupos');
+                }
+                
+                const grupos = data.grupos || [];
+                console.log(`📊 ${grupos.length} grupos disponíveis`);
+                
+                if (grupos.length === 0) {
+                    document.getElementById('grupos-grid').innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-muted);">
+                            <p>📍 Nenhum grupo cadastrado ainda.</p>
+                            <p style="font-size: 0.9rem;">Vá para <a href="/autenticado/grupos" style="color: var(--accent);">Gestão de Grupos</a> para criar áreas de visita.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Armazenar grupos para uso posterior
+                gruposData = grupos;
+                
+                // Contar clientes e renderizar
+                await contarClientesPorGrupo();
+                renderizarGrupos();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar grupos:', error);
+                document.getElementById('grupos-grid').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #e74c3c;">
+                        <p>❌ Erro ao carregar grupos</p>
+                        <p style="font-size: 0.9rem;">${error.message}</p>
+                        <button onclick="carregarGrupos()" style="margin-top: 16px; padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        // Conta clientes dentro de cada área de grupo
+        async function contarClientesPorGrupo() {
+            try {
+                console.log('🔍 Contando clientes por grupo...');
+                console.log('📊 Grupos carregados:', gruposData);
+                
+                // Buscar clientes do usuário
+                const responseClientes = await fetch('/autenticado/grupos?action=get');
+                const clientesData = await responseClientes.json();
+                const clientes = clientesData.clients || [];
+                
+                console.log('👥 Total de clientes carregados:', clientes.length);
+
+                gruposData.forEach(grupo => {
+                    console.log(`\n📍 Processando grupo: ${grupo.name} (ID: ${grupo.id})`);
+                    
+                    // grupo.coordinates já está no formato correto [[lon, lat], ...]
+                    const coordinates = grupo.coordinates || [];
+                    
+                    console.log('  📐 Coordenadas do polígono:', coordinates.length, 'pontos');
+                    
+                    if (coordinates.length === 0) {
+                        console.log('  ⚠️ Nenhuma coordenada encontrada');
+                        clientesPorGrupo[grupo.id] = 0;
+                        return;
+                    }
+                    
+                    // Converte coordenadas [lon, lat] para [lat, lon] do Leaflet
+                    const leafletCoords = coordinates.map(coord => [coord[1], coord[0]]);
+                    const polygon = L.polygon(leafletCoords);
+                    let count = 0;
+
+                    console.log('  🔎 Verificando clientes...');
+                    
+                    clientes.forEach(cliente => {
+                        if (cliente.points && cliente.points.length > 0) {
+                            cliente.points.forEach(point => {
+                                if (point.latitude && point.longitude && !point.user_point) {
+                                    const latLng = L.latLng(point.latitude, point.longitude);
+                                    if (polygon.getBounds().contains(latLng)) {
+                                        // Verifica se está realmente dentro do polígono
+                                        if (isPointInPolygon(latLng, leafletCoords)) {
+                                            count++;
+                                            if (count <= 5) { // Mostra apenas os 5 primeiros
+                                                console.log(`    ✓ Cliente ${cliente.name_client} está dentro`);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+                    console.log(`  ✅ Total de clientes no grupo ${grupo.name}: ${count}`);
+                    clientesPorGrupo[grupo.id] = count;
+                });
+                
+                console.log('\n📊 Resumo final:', clientesPorGrupo);
+            } catch (error) {
+                console.error('❌ Erro ao contar clientes:', error);
+            }
+        }
+
+        // Verifica se um ponto está dentro de um polígono (Ray Casting Algorithm)
+        function isPointInPolygon(point, polygon) {
+            let inside = false;
+            const x = point.lat, y = point.lng;
+
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i][0], yi = polygon[i][1];
+                const xj = polygon[j][0], yj = polygon[j][1];
+
+                const intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+
+            return inside;
+        }
+
+        // Renderiza os grupos como checkboxes estilizados
+        function renderizarGrupos() {
+            const container = document.getElementById('grupos-grid');
+            container.innerHTML = '';
+
+            gruposData.forEach(grupo => {
+                const numClientes = clientesPorGrupo[grupo.id] || 0;
+                const nomeGrupo = grupo.name || 'Grupo sem nome';
+                const grupoHtml = `
+                    <div>
+                        <input 
+                            type="checkbox" 
+                            id="grupo-${grupo.id}" 
+                            class="grupo-checkbox" 
+                            value="${grupo.id}"
+                            onchange="toggleGrupo(${grupo.id})"
+                        >
+                        <label for="grupo-${grupo.id}" class="grupo-label">
+                            <div class="grupo-icon">📍</div>
+                            <div class="grupo-name">${nomeGrupo}</div>
+                            <div class="grupo-badge">
+                                <span class="grupo-badge-icon">👥</span>
+                                <span>${numClientes}</span>
+                            </div>
+                        </label>
+                    </div>
+                `;
+                container.innerHTML += grupoHtml;
+            });
+        }
+
+        // Toggle seleção de grupo
+        function toggleGrupo(grupoId) {
+            if (gruposSelecionados.has(grupoId)) {
+                gruposSelecionados.delete(grupoId);
+            } else {
+                gruposSelecionados.add(grupoId);
+            }
+            atualizarResumo();
+        }
+
+        // Atualiza o resumo de clientes e dias
+        function atualizarResumo() {
+            let totalClientes = 0;
+
+            gruposSelecionados.forEach(grupoId => {
+                totalClientes += clientesPorGrupo[grupoId] || 0;
+            });
+
+            const dias = parseInt(document.getElementById('dias-input').value) || 1;
+            const enableLimit = document.getElementById('enable-limit').checked;
+            const maxClients = parseInt(document.getElementById('max-clients-input').value) || 12;
+            
+            // Se limite está ativo, mostra o valor máximo; senão calcula a média
+            const clientesPorDia = enableLimit ? maxClients : (dias > 0 ? Math.ceil(totalClientes / dias) : 0);
+
+            document.getElementById('total-clientes').textContent = totalClientes;
+            document.getElementById('total-dias').textContent = dias;
+            document.getElementById('clientes-por-dia').textContent = clientesPorDia;
+
+            // Habilita/desabilita botão confirmar
+            const btnConfirmar = document.getElementById('btn-confirmar');
+            if (gruposSelecionados.size > 0 && totalClientes > 0 && dias > 0) {
+                btnConfirmar.disabled = false;
+            } else {
+                btnConfirmar.disabled = true;
+            }
+        }
+
+        // Event listener para mudança de dias
+        document.getElementById('dias-input').addEventListener('input', atualizarResumo);
+
+        // Event listener para mudança do máximo de clientes
+        document.getElementById('max-clients-input').addEventListener('input', atualizarResumo);
+
+        // Event listener para checkbox de limite
+        document.getElementById('enable-limit').addEventListener('change', function() {
+            const limitInput = document.getElementById('max-clients-input');
+            const limitContainer = document.getElementById('limite-input-container');
+            
+            if (this.checked) {
+                limitInput.disabled = false;
+                limitContainer.style.opacity = '1';
+            } else {
+                limitInput.disabled = true;
+                limitContainer.style.opacity = '0.5';
+            }
+            atualizarResumo(); // Atualiza o resumo quando ativar/desativar
+        });
+
+        // Confirma e envia dados para processar roteirização
+        async function confirmarRoteirizacao() {
+            const dias = parseInt(document.getElementById('dias-input').value);
+            const gruposArray = Array.from(gruposSelecionados);
+            const enableLimit = document.getElementById('enable-limit').checked;
+            const maxClients = enableLimit ? parseInt(document.getElementById('max-clients-input').value) : null;
+            
+            if (gruposArray.length === 0) {
+                alert('⚠️ Selecione pelo menos um grupo de vendas');
+                return;
+            }
+
+            if (!dias || dias <= 0 || dias > 30) {
+                alert('⚠️ Informe um número válido de dias (1-30)');
+                return;
+            }
+
+            if (enableLimit && (maxClients < 1 || maxClients > 100)) {
+                alert('⚠️ Máximo de clientes por dia deve estar entre 1 e 100');
+                return;
+            }
+
+            // Esconde botão e mostra loader
+            const btnConfirmar = document.getElementById('btn-confirmar');
+            const loadingContainer = document.getElementById('loading-container');
+            
+            btnConfirmar.style.display = 'none';
+            loadingContainer.style.display = 'flex';
+
+            // Marca o tempo de início do loader
+            const startTime = Date.now();
+            const minLoadTime = 10000; // 10 segundos mínimo
+
+            try {
+                const payload = {
+                    dias: dias,
+                    grupos_selecionados: gruposArray
+                };
+                
+                // Adiciona max_clients_per_day apenas se o limite estiver habilitado
+                if (enableLimit && maxClients) {
+                    payload.max_clients_per_day = maxClients;
+                }
+
+                const response = await fetch('/autenticado/roteirizacao/processar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                // Calcula quanto tempo passou
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, minLoadTime - elapsedTime);
+
+                // Aguarda o tempo restante para completar 10 segundos
+                await new Promise(resolve => setTimeout(resolve, remainingTime));
+
+                if (result.success) {
+                    // Esconde loader
+                    loadingContainer.style.display = 'none';
+                    btnConfirmar.style.display = 'inline-flex';
+                    
+                    // Renderiza os resultados
+                    renderizarResultados(result);
+                    
+                    // Mostra o card de resultados
+                    document.getElementById('resultados-card').style.display = 'block';
+                    
+                    // Scroll suave até os resultados
+                    document.getElementById('resultados-card').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    
+                    console.log('Resultado da roteirização:', result);
+                } else {
+                    // Esconde loader e mostra botão novamente
+                    loadingContainer.style.display = 'none';
+                    btnConfirmar.style.display = 'inline-flex';
+                    
+                    alert(`❌ Erro: ${result.error || 'Erro desconhecido'}`);
+                }
+            } catch (error) {
+                console.error('Erro ao processar roteirização:', error);
+                
+                // Calcula quanto tempo passou
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, minLoadTime - elapsedTime);
+
+                // Aguarda o tempo restante para completar 10 segundos
+                await new Promise(resolve => setTimeout(resolve, remainingTime));
+                
+                // Esconde loader e mostra botão novamente
+                loadingContainer.style.display = 'none';
+                btnConfirmar.style.display = 'inline-flex';
+                
+                alert('❌ Erro ao processar roteirização. Verifique o console para mais detalhes.');
+            }
+        }
+
+        // Renderiza os resultados da roteirização
+        function renderizarResultados(result) {
+            const mensagem = document.getElementById('mensagem-sucesso');
+            
+            // Salva dados dos clusters globalmente
+            clustersData = result.groups || [];
+            
+            // Salva configuração usada na roteirização
+            configCalendario = {
+                dias: result.requested_days || 30,
+                incluir_sabado: false, // Será atualizado pela checkbox
+                incluir_domingo: false, // Será atualizado pela checkbox
+                max_clientes_dia: result.max_clients_per_day || null
+            };
+            
+            // Atualiza mensagem de sucesso (sem emojis e sem texto de divisões)
+            const totalGroups = result.total_groups || 0;
+            mensagem.textContent = `${totalGroups} clusters criados com sucesso!`;
+            
+            // Atualiza resumo no estilo dos bullets
+            const totalClients = result.total_clients || 0;
+            const requestedDays = result.requested_days || 1;
+            const avgClientsPerDay = requestedDays > 0 ? Math.ceil(totalClients / requestedDays) : 0;
+            
+            document.getElementById('resultado-clientes').textContent = totalClients;
+            document.getElementById('resultado-dias').textContent = requestedDays;
+            document.getElementById('resultado-media').textContent = avgClientsPerDay;
+            
+            // Mostra máximo por dia se houver limite configurado
+            const maxClientsPerDay = result.max_clients_per_day;
+            const limiteCard = document.getElementById('resultado-limite-card');
+            if (maxClientsPerDay && maxClientsPerDay > 0) {
+                document.getElementById('resultado-limite').textContent = maxClientsPerDay;
+                limiteCard.style.display = 'flex';
+            } else {
+                limiteCard.style.display = 'none';
+            }
+            
+            // Não mostra o resumo na etapa 3 (mantém apenas na etapa 2)
+            // document.getElementById('resumo-resultado').style.display = 'flex';
+            
+            // Renderiza grupos em lista simples (não calendário ainda)
+            renderizarGruposLista(result.groups);
+        }
+
+        // Renderiza grupos em formato de lista simples (antes da calendarização)
+        function renderizarGruposLista(groups) {
+            const container = document.getElementById('grupos-por-dia-container');
+            container.innerHTML = '';
+            
+            if (!groups || groups.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Nenhum grupo criado</p>';
+                return;
+            }
+            
+            // Cria grid de clusters
+            const clustersGrid = document.createElement('div');
+            clustersGrid.className = 'clusters-animated-grid';
+            
+            const coresConfig = [
+                { cor: 'rgba(102, 126, 234, 0.1)', gradiente: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)' },
+                { cor: 'rgba(102, 126, 234, 0.1)', gradiente: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)' },
+            ];
+            
+            groups.forEach((group, index) => {
+                const config = coresConfig[index % coresConfig.length];
+                const scoreColor = group.score_medio && group.score_medio > 0 ? getScoreColor(group.score_medio) : '#999';
+                const segmento = group.segmento_predominante || 'Não classificado';
+                
+                // Nome do grupo vem da API agora
+                const nomeGrupo = group.original_polygon_name || 'Grupo não identificado';
+                
+                const clusterCard = document.createElement('div');
+                clusterCard.className = 'cluster-animated-card';
+                // Cor sólida ao invés de gradiente
+                clusterCard.style.background = config.cor;
+                clusterCard.setAttribute('data-color', config.cor);
+                
+                clusterCard.innerHTML = `
+                    <div class="cluster-front-content">
+                        <svg class="cluster-icon-front" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                        </svg>
+                        <p class="cluster-front-title">Cluster ${group.group_number}</p>
+                        <p class="cluster-front-subtitle">👥 ${group.total_clients} cliente${group.total_clients !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div class="cluster-card-content">
+                        <p class="cluster-card-title">Cluster ${group.group_number}</p>
+                        <div class="cluster-card-info">
+                            <div class="cluster-info-row">
+                                <span class="info-label">👥 Clientes:</span>
+                                <span class="info-value">${group.total_clients}</span>
+                            </div>
+                            <div class="cluster-info-row">
+                                <span class="info-label">⭐ Nota:</span>
+                                <span class="info-value" style="color: ${scoreColor};">
+                                    ${group.score_medio && group.score_medio > 0 ? group.score_medio.toFixed(1) : 'N/A'}
+                                </span>
+                            </div>
+                            <div class="cluster-info-row">
+                                <span class="info-label">📍 Grupo de Vendas:</span>
+                                <span class="info-value">${nomeGrupo}</span>
+                            </div>
+                
+                            ${group.is_split ? `
+                                <div class="cluster-split-badge">
+                                    ⚠️ Dividido por limite
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                clustersGrid.appendChild(clusterCard);
+            });
+            
+            container.appendChild(clustersGrid);
+        }
+
+        // Renderiza grupos organizados por dia em formato de calendário (após calendarizar)
+        function renderizarGruposPorDia(groups) {
+            const container = document.getElementById('grupos-por-dia-container');
+            container.innerHTML = '';
+            
+            if (!groups || groups.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Nenhum grupo criado</p>';
+                return;
+            }
+            
+            // Organiza grupos por dia
+            const groupsByDay = {};
+            groups.forEach(group => {
+                const day = group.day || group.group_number;
+                if (!groupsByDay[day]) {
+                    groupsByDay[day] = [];
+                }
+                groupsByDay[day].push(group);
+            });
+            
+            // Cores para os dias
+            const coresConfig = [
+                { cor: '#FF8F1C', gradiente: 'linear-gradient(90deg, #FF8F1C 0%, #FFB347 100%)' },
+                { cor: '#FF8F1C', gradiente: 'linear-gradient(90deg, #FF8F1C 0%, #FFB347 100%)' },
+                { cor: '#FF8F1C', gradiente: 'linear-gradient(90deg, #FF8F1C 0%, #FFB347 100%)' },
+                ];
+            
+            // Cria grid de calendário
+            const calendarGrid = document.createElement('div');
+            calendarGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;';
+            
+            // Renderiza cada dia como um card compacto
+            Object.keys(groupsByDay).sort((a, b) => a - b).forEach(day => {
+                const dayGroups = groupsByDay[day];
+                const totalClients = dayGroups.reduce((sum, g) => sum + g.total_clients, 0);
+                const config = coresConfig[(day - 1) % coresConfig.length];
+                const hasSplit = dayGroups.some(g => g.is_split);
+                
+                const dayCard = document.createElement('div');
+                dayCard.style.cssText = `
+                    background: var(--card-bg);
+                    border: 2px solid ${config.cor};
+                    border-radius: 12px;
+                    padding: 16px;
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                `;
+                
+                dayCard.innerHTML = `
+                    <div style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 4px;
+                        background: linear-gradient(90deg, ${config.cor}, ${config.corEscura});
+                    "></div>
+                    
+                    <div style="margin-top: 8px; text-align: center;">
+                        <div style="
+                            font-size: 2rem;
+                            font-weight: bold;
+                            color: ${config.cor};
+                            margin-bottom: 4px;
+                        ">${day}</div>
+                        <div style="
+                            font-size: 0.75rem;
+                            color: var(--text-muted);
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
+                            margin-bottom: 12px;
+                        ">Dia</div>
+                    </div>
+                    
+                    <div style="
+                        background: rgba(${config.cor === '#667eea' ? '102, 126, 234' : 
+                                       config.cor === '#4caf50' ? '76, 175, 80' :
+                                       config.cor === '#ff6b6b' ? '255, 107, 107' :
+                                       config.cor === '#ffd93d' ? '255, 217, 61' :
+                                       config.cor === '#6bcf7f' ? '107, 207, 127' :
+                                       config.cor === '#f78fb3' ? '247, 143, 179' :
+                                       config.cor === '#95e1d3' ? '149, 225, 211' :
+                                       config.cor === '#f38181' ? '243, 129, 129' :
+                                       config.cor === '#aa96da' ? '170, 150, 218' : '252, 186, 211'}, 0.1);
+                        border-radius: 8px;
+                        padding: 12px;
+                        margin-top: 12px;
+                    ">
+                        <div style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            font-size: 0.9rem;
+                            color: var(--text);
+                        ">
+                            <span style="font-size: 1.2rem;">👥</span>
+                            <span style="font-weight: 600;">${totalClients}</span>
+                            <span style="color: var(--text-muted); font-size: 0.85rem;">cliente${totalClients !== 1 ? 's' : ''}</span>
+                        </div>
+                        
+                        ${dayGroups.length > 1 ? `
+                            <div style="
+                                text-align: center;
+                                margin-top: 8px;
+                                font-size: 0.75rem;
+                                color: var(--text-muted);
+                            ">
+                                ${dayGroups.length} grupos
+                            </div>
+                        ` : ''}
+                        
+                        ${hasSplit ? `
+                            <div style="
+                                margin-top: 8px;
+                                padding: 4px 8px;
+                                background: rgba(255, 152, 0, 0.2);
+                                border-radius: 4px;
+                                text-align: center;
+                                font-size: 0.7rem;
+                                color: #ff9800;
+                                font-weight: 600;
+                            ">⚠️ Dividido</div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                // Hover effect
+                dayCard.onmouseenter = () => {
+                    dayCard.style.transform = 'translateY(-4px)';
+                    dayCard.style.boxShadow = `0 8px 16px rgba(${config.cor === '#667eea' ? '102, 126, 234' : '0, 0, 0'}, 0.2)`;
+                };
+                dayCard.onmouseleave = () => {
+                    dayCard.style.transform = 'translateY(0)';
+                    dayCard.style.boxShadow = 'none';
+                };
+                
+                calendarGrid.appendChild(dayCard);
+            });
+            
+            container.appendChild(calendarGrid);
+        }
+
+        // Retorna cor baseada no score
+        function getScoreColor(score) {
+            if (score >= 80) return '#48bb78'; // Verde (VIP)
+            if (score >= 60) return '#4299e1'; // Azul (Alto Valor)
+            if (score >= 40) return '#f59e0b'; // Laranja (Médio)
+            return '#f56565'; // Vermelho (Em Risco)
+        }
+        
+        // Retorna cor de fundo do segmento
+        function getSegmentoColor(segmento) {
+            const cores = {
+                'VIP': 'rgba(72, 187, 120, 0.2)',
+                'Alto Valor': 'rgba(66, 153, 225, 0.2)',
+                'Médio': 'rgba(245, 158, 11, 0.2)',
+                'Em Risco': 'rgba(245, 101, 101, 0.2)'
+            };
+            return cores[segmento] || 'rgba(160, 174, 192, 0.2)';
+        }
+
+        // Função auxiliar para mostrar mensagens
+        function showStatus(message, type = 'success') {
+            // Implementar notificação visual se necessário
+            console.log(`[${type}] ${message}`);
+        }
+
+        // Inicializa ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            carregarGrupos();
+        });
+
+        // ==================== CALENDARIZAÇÃO ====================
+        
+        let clustersData = []; // Armazena dados dos clusters
+        let clustersAlocados = {}; // {data: cluster}
+        let configCalendario = { // Armazena configuração da roteirização
+            dias: 30,
+            incluir_sabado: false,
+            incluir_domingo: false,
+            max_clientes_dia: null
+        };
+        
+        // Função: Calendarizar
+        function calendarizar() {
+            if (!clustersData || clustersData.length === 0) {
+                alert('⚠️ Nenhum cluster disponível para calendarizar. Execute a roteirização primeiro.');
+                return;
+            }
+            
+            const incluirSabado = document.getElementById('checkbox-sabado').checked;
+            const incluirDomingo = document.getElementById('checkbox-domingo').checked;
+            
+            console.log('🔧 Configuração de Calendarização:');
+            console.log(`  - Incluir Sábados: ${incluirSabado}`);
+            console.log(`  - Incluir Domingos: ${incluirDomingo}`);
+            console.log(`  - Clusters disponíveis: ${clustersData.length}`);
+            
+            // Ordena clusters por prioridade (score > num_clientes)
+            const clustersOrdenados = [...clustersData].sort((a, b) => {
+                const scoreA = a.score_medio || 0;
+                const scoreB = b.score_medio || 0;
+                
+                // Prioridade 1: Score médio (maior primeiro)
+                if (scoreB !== scoreA) {
+                    return scoreB - scoreA;
+                }
+                
+                // Prioridade 2: Número de clientes (maior primeiro)
+                const clientesA = a.total_clients || a.num_clientes || 0;
+                const clientesB = b.total_clients || b.num_clientes || 0;
+                return clientesB - clientesA;
+            });
+            
+            console.log('Clusters ordenados por prioridade:');
+            clustersOrdenados.forEach((c, i) => {
+                const numClientes = c.total_clients || c.num_clientes || 0;
+                const score = c.score_medio || 0;
+                console.log(`  ${i+1}. Cluster ${c.group_number || i+1}: Score ${score.toFixed(1)} | ${numClientes} clientes`);
+            });
+            
+            // Gera dias do calendário
+            const diasCalendario = gerarDiasCalendario(30, incluirSabado, incluirDomingo);
+            
+            // Aloca 1 cluster por dia
+            clustersAlocados = {};
+            const clustersInventario = [];
+            
+            clustersOrdenados.forEach((cluster, index) => {
+                if (index < diasCalendario.length) {
+                    // Aloca no dia
+                    clustersAlocados[diasCalendario[index]] = cluster;
+                } else {
+                    // Vai para inventário
+                    clustersInventario.push(cluster);
+                }
+            });
+            
+            console.log(`📅 Clusters alocados: ${Object.keys(clustersAlocados).length}`);
+            console.log(`📦 Clusters no inventário: ${clustersInventario.length}`);
+            
+            // Renderiza calendário
+            renderizarCalendario(diasCalendario);
+            renderizarInventario(clustersInventario);
+            
+            // Mostra card do calendário
+            document.getElementById('calendario-card').style.display = 'block';
+            
+            // Scroll suave
+            setTimeout(() => {
+                document.getElementById('calendario-card').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 100);
+        }
+        
+        // Gera array de datas (strings YYYY-MM-DD)
+        function gerarDiasCalendario(numDias, incluirSabado, incluirDomingo) {
+            const dias = [];
+            const hoje = new Date();
+            let diasAdicionados = 0;
+            let offset = 1; // Começa do próximo dia
+            
+            while (diasAdicionados < numDias) {
+                const dia = new Date(hoje);
+                dia.setDate(hoje.getDate() + offset);
+                
+                const diaSemana = dia.getDay(); // 0=domingo, 6=sábado
+                
+                // Verifica se deve incluir este dia
+                const ehSabado = diaSemana === 6;
+                const ehDomingo = diaSemana === 0;
+                
+                // Pula sábado se não estiver marcado
+                if (ehSabado && !incluirSabado) {
+                    offset++;
+                    continue;
+                }
+                
+                // Pula domingo se não estiver marcado
+                if (ehDomingo && !incluirDomingo) {
+                    offset++;
+                    continue;
+                }
+                
+                // Adiciona dia
+                const dataStr = dia.toISOString().split('T')[0];
+                dias.push(dataStr);
+                diasAdicionados++;
+                offset++;
+            }
+            
+            console.log(`📅 Gerados ${dias.length} dias | Sábado: ${incluirSabado} | Domingo: ${incluirDomingo}`);
+            console.log('Primeiros dias:', dias.slice(0, 7));
+            
+            return dias;
+        }
+        
+        // Renderiza o calendário
+        function renderizarCalendario(dias) {
+            const container = document.getElementById('calendario-container');
+            container.innerHTML = '';
+            
+            dias.forEach(dataStr => {
+                const data = new Date(dataStr + 'T00:00:00');
+                const diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][data.getDay()];
+                const diaNumero = data.getDate();
+                const mes = data.toLocaleDateString('pt-BR', { month: 'short' });
+                
+                const cluster = clustersAlocados[dataStr];
+                
+                const diaHtml = `
+                    <div class="dia-calendario" 
+                         data-data="${dataStr}"
+                         ondrop="drop(event)"
+                         ondragover="allowDrop(event)"
+                         ondragleave="dragLeave(event)">
+                        <div class="dia-header">
+                            <div class="dia-numero">${diaNumero}</div>
+                            <div class="dia-info">
+                                <div class="dia-semana">${diaSemana}</div>
+                                <div class="dia-mes">${mes}</div>
+                            </div>
+                        </div>
+                        <div class="dia-content" id="dia-${dataStr}">
+                            ${cluster ? renderizarClusterMini(cluster) : '<div class="slot-vazio">Arraste um cluster aqui</div>'}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += diaHtml;
+            });
+        }
+        
+        // Renderiza inventário
+        function renderizarInventario(clusters) {
+            const container = document.getElementById('inventario-list');
+            const badge = document.getElementById('inventario-count');
+            
+            badge.textContent = clusters.length;
+            
+            if (clusters.length === 0) {
+                container.innerHTML = '<div class="inventario-vazio">✅ Todos os clusters foram alocados!</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            clusters.forEach(cluster => {
+                container.innerHTML += renderizarClusterMini(cluster);
+            });
+        }
+        
+        // Renderiza cluster em formato mini (para arrastar)
+        function renderizarClusterMini(cluster) {
+            // Usa group_number ao invés de cluster_id
+            const groupNum = cluster.group_number || cluster.cluster_id || 0;
+            const corConfig = obterCorCluster(groupNum - 1); // -1 porque group_number começa em 1
+            const scoreColor = getScoreColor(cluster.score_medio || 0);
+            const numClientes = cluster.total_clients || cluster.num_clientes || 0;
+            const nomeGrupo = cluster.original_polygon_name || 'Grupo não identificado';
+            
+            return `
+                <div class="cluster-mini-animated" 
+                     draggable="true" 
+                     ondragstart="drag(event)"
+                     data-cluster-id="${groupNum}"
+                     style="background: ${corConfig.cor};">
+                    <div class="cluster-mini-front">
+                        <svg class="cluster-mini-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+                        </svg>
+                        <p class="cluster-mini-title">Cluster ${groupNum}</p>
+                        <p class="cluster-mini-subtitle">👥 ${numClientes} cliente${numClientes !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div class="cluster-mini-back">
+                        <p class="cluster-mini-back-title">Cluster ${groupNum}</p>
+                        <div class="cluster-mini-back-info">
+                            <div class="mini-info-row">
+                                <span class="mini-label">👥 Clientes:</span>
+                                <span class="mini-value">${numClientes}</span>
+                            </div>
+                            <div class="mini-info-row">
+                                <span class="mini-label">⭐ Nota:</span>
+                                <span class="mini-value" style="color: ${scoreColor};">
+                                    ${cluster.score_medio && cluster.score_medio > 0 ? cluster.score_medio.toFixed(1) : 'N/A'}
+                                </span>
+                            </div>
+                            <div class="mini-info-row">
+                                <span class="mini-label">📍 Grupo:</span>
+                                <span class="mini-value">${nomeGrupo}</span>
+                            </div>
+                            ${cluster.is_split ? `
+                                <div class="mini-split-badge">⚠️ Dividido</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Obter configuração de cor do cluster
+        function obterCorCluster(clusterIndex) {
+            const coresConfig = [
+                { cor: 'rgba(102, 126, 234, 0.1)', gradiente: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)' },
+                { cor: 'rgba(102, 126, 234, 0.1)', gradiente: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%)' },
+            ];
+            // Garante índice válido
+            const index = Math.max(0, clusterIndex) % coresConfig.length;
+            return coresConfig[index];
+        }
+        
+        // ==================== DRAG AND DROP ====================
+        
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+        
+        function dragLeave(ev) {
+            ev.currentTarget.classList.remove('drag-over');
+        }
+        
+        function drag(ev) {
+            const clusterId = ev.target.closest('.cluster-mini-animated').getAttribute('data-cluster-id');
+            ev.dataTransfer.setData("clusterId", clusterId);
+        }
+        
+        function drop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            
+            const clusterId = parseInt(ev.dataTransfer.getData("clusterId"));
+            const dataAlvo = ev.currentTarget.getAttribute('data-data');
+            
+            // Encontra o cluster pelo group_number
+            const cluster = clustersData.find(c => 
+                (c.group_number || c.cluster_id) === clusterId
+            );
+            
+            if (!cluster) return;
+            
+            // Remove cluster de onde estava (qualquer dia)
+            for (let data in clustersAlocados) {
+                const alocado = clustersAlocados[data];
+                if ((alocado.group_number || alocado.cluster_id) === clusterId) {
+                    delete clustersAlocados[data];
+                    break;
+                }
+            }
+            
+            // Se já existe cluster neste dia, move o antigo para o inventário
+            if (clustersAlocados[dataAlvo]) {
+                console.log(`🔄 Dia ${dataAlvo} já tem cluster, removendo o anterior`);
+            }
+            
+            // Aloca no novo dia
+            clustersAlocados[dataAlvo] = cluster;
+            
+            // Re-renderiza
+            recalcularCalendario();
+        }
+        
+        // Função para soltar no inventário (remove do calendário)
+        function dropToInventory(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            
+            const clusterId = parseInt(ev.dataTransfer.getData("clusterId"));
+            
+            // Encontra o cluster pelo group_number
+            const cluster = clustersData.find(c => 
+                (c.group_number || c.cluster_id) === clusterId
+            );
+            
+            if (!cluster) return;
+            
+            // Remove cluster de onde estava (qualquer dia)
+            let removido = false;
+            for (let data in clustersAlocados) {
+                const alocado = clustersAlocados[data];
+                if ((alocado.group_number || alocado.cluster_id) === clusterId) {
+                    delete clustersAlocados[data];
+                    removido = true;
+                    console.log(`📦 Cluster ${clusterId} movido para inventário`);
+                    break;
+                }
+            }
+            
+            if (removido) {
+                // Re-renderiza
+                recalcularCalendario();
+            }
+        }
+        
+        // Recalcula e renderiza calendário e inventário
+        function recalcularCalendario() {
+            const incluirSabado = document.getElementById('checkbox-sabado').checked;
+            const incluirDomingo = document.getElementById('checkbox-domingo').checked;
+            const diasCalendario = gerarDiasCalendario(30, incluirSabado, incluirDomingo);
+            
+            // Identifica clusters não alocados (usa group_number)
+            const clustersAlocadosIds = new Set(
+                Object.values(clustersAlocados).map(c => c.group_number || c.cluster_id)
+            );
+            const clustersInventario = clustersData.filter(c => 
+                !clustersAlocadosIds.has(c.group_number || c.cluster_id)
+            );
+            
+            renderizarCalendario(diasCalendario);
+            renderizarInventario(clustersInventario);
+        }
+
+        // Salva o calendário (exporta e salva no sistema)
+        async function salvarCalendario() {
+            // Valida se há clusters alocados
+            const diasComClusters = Object.keys(clustersAlocados).length;
+            
+            if (diasComClusters === 0) {
+                alert('⚠️ Não há clusters alocados no calendário para salvar.');
+                return;
+            }
+
+            // Verifica se usuário está autenticado
+            if (!userId || userId === 'anon') {
+                alert('⚠️ Você precisa estar logado para salvar calendários.\n\nRedirecionando para login...');
+                window.location.href = '/login';
+                return;
+            }
+
+            // Prepara dados do calendário
+            const calendarioData = {
+                nome: prompt('Digite um nome para este calendário de rotas:') || `Calendário ${new Date().toLocaleDateString('pt-BR')}`,
+                data_criacao: new Date().toISOString(),
+                configuracao: {
+                    dias: configCalendario.dias,
+                    incluir_sabado: document.getElementById('checkbox-sabado')?.checked || configCalendario.incluir_sabado,
+                    incluir_domingo: document.getElementById('checkbox-domingo')?.checked || configCalendario.incluir_domingo,
+                    max_clientes_dia: configCalendario.max_clientes_dia
+                },
+                alocacoes: Object.entries(clustersAlocados).map(([dia, cluster]) => {
+                    const alocacao = {
+                        dia: parseInt(dia),
+                        cluster_id: cluster.group_number || cluster.cluster_id,
+                        num_clientes: cluster.clients?.length || 0,
+                        score_medio: cluster.score_medio,
+                        polygon_name: cluster.original_polygon_name,
+                        clientes: cluster.clients ? cluster.clients.map((c, idx) => {
+                            // Backend retorna 'lat' e 'lng', não 'latitude' e 'longitude'
+                            const latitude = c.latitude || c.lat;
+                            const longitude = c.longitude || c.lng;
+                            
+                            // Debug: Log das coordenadas
+                            if (idx < 3) {
+                                console.log(`Dia ${dia}, Cliente ${idx + 1}:`, {
+                                    hash: c.hash_client,
+                                    lat: latitude,
+                                    lng: longitude,
+                                    score: c.score,
+                                    original_c: c
+                                });
+                            }
+                            return {
+                                hash_cliente: c.hash_client,
+                                latitude: latitude,
+                                longitude: longitude,
+                                score: c.score || null
+                            };
+                        }) : []
+                    };
+                    return alocacao;
+                }),
+                total_clusters: diasComClusters,
+                total_clientes: Object.values(clustersAlocados).reduce((sum, c) => sum + (c.clients?.length || 0), 0)
+            };
+
+            try {
+                console.log('💾 Salvando calendário no sistema...');
+                console.log('📦 Dados:', {
+                    nome: calendarioData.nome,
+                    total_clusters: calendarioData.total_clusters,
+                    total_clientes: calendarioData.total_clientes,
+                    num_alocacoes: calendarioData.alocacoes.length
+                });
+                
+                // Valida que temos alocações
+                if (!calendarioData.alocacoes || calendarioData.alocacoes.length === 0) {
+                    throw new Error('Nenhuma alocação foi preparada para salvar');
+                }
+                
+                console.log('🔍 Primeira alocação:', calendarioData.alocacoes[0]);
+
+                // Salva no sistema
+                const response = await fetch('/autenticado/roteirizacao/salvar-calendario', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(calendarioData)
+                });
+
+                console.log('📡 Resposta do servidor:', response.status, response.statusText);
+
+                if (!response.ok) {
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    
+                    // Trata erro de autenticação
+                    if (response.status === 401 || response.status === 403) {
+                        alert('⚠️ Sessão expirada. Faça login novamente.');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } else {
+                            // Se não é JSON, provavelmente é uma página de erro HTML
+                            console.warn('⚠️ Servidor retornou HTML em vez de JSON - possível redirecionamento ou erro');
+                            errorMessage = 'Erro de autenticação ou servidor indisponível';
+                        }
+                    } catch (parseError) {
+                        console.error('Erro ao parsear resposta:', parseError);
+                    }
+                    
+                    console.error('❌ Erro do servidor:', errorMessage);
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                console.log('✅ Resultado do salvamento:', result);
+                
+                // Redireciona para o painel com mensagem de sucesso
+                sessionStorage.setItem('calendario_salvo', 'true');
+                sessionStorage.setItem('calendario_id', result.id);
+                window.location.href = '/autenticado/painel';
+                
+            } catch (error) {
+                console.error('❌ ERRO COMPLETO:', error);
+                console.error('❌ Tipo:', typeof error);
+                console.error('❌ Message:', error.message);
+                console.error('❌ Stack:', error.stack);
+                
+                const errorMsg = error.message || error.toString() || 'Erro desconhecido';
+                alert(`❌ Erro ao salvar calendário:\n\n${errorMsg}\n\nVerifique o console (F12) para mais detalhes.`);
+            }
+        }
+    </script>
+{% endblock %}
+

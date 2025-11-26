@@ -1,0 +1,705 @@
+{% extends "layout_base.html" %}
+
+{% block title %}Ponto Base - SynapseLog{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    /* Page Header */
+    .page-header {
+        margin-bottom: 30px;
+    }
+
+    .page-header h1 {
+        font-size: 28px;
+        margin-bottom: 8px;
+        color: var(--text);
+    }
+
+    .page-header p {
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+
+    /* Grid Layout */
+    .config-grid {
+        display: grid;
+        grid-template-columns: 450px 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    /* Form Card */
+    .form-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+    }
+
+    .form-card h3 {
+        margin-top: 0;
+        color: var(--text);
+        margin-bottom: 20px;
+    }
+
+    /* Form Elements */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        background: var(--darker-bg);
+        color: var(--text);
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-input small {
+        display: block;
+        color: var(--text-muted);
+        font-size: 12px;
+        margin-top: 6px;
+    }
+
+    /* Range Input */
+    .range-input {
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .range-value {
+        display: inline-block;
+        background: var(--accent);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+
+    /* Coordinates Display */
+    .coordinates-display {
+        background: var(--darker-bg);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        color: var(--text);
+        line-height: 1.6;
+    }
+
+    /* Save Button */
+    .btn-save {
+        width: 100%;
+        padding: 14px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
+    }
+
+    .btn-save:hover:not(:disabled) {
+        background: #5568d3;
+        transform: translateY(-1px);
+    }
+
+    .btn-save:disabled {
+        background: #4a5568;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    /* Status Messages */
+    .status {
+        margin-top: 15px;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        display: none;
+    }
+
+    .status.success {
+        background: rgba(72, 187, 120, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(72, 187, 120, 0.3);
+        display: block;
+    }
+
+    .status.error {
+        background: rgba(245, 101, 101, 0.15);
+        color: var(--danger);
+        border: 1px solid rgba(245, 101, 101, 0.3);
+        display: block;
+    }
+
+    /* Map Card */
+    .map-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+    }
+
+    .map-card h3 {
+        margin-top: 0;
+        color: var(--text);
+        margin-bottom: 15px;
+    }
+
+    #map {
+        width: 100%;
+        height: 500px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+    }
+
+    /* Leaflet Dark Theme */
+    .leaflet-container {
+        background: #0f1419;
+    }
+
+    .leaflet-popup-content-wrapper {
+        background: var(--card-bg);
+        color: var(--text);
+    }
+
+    .leaflet-popup-tip {
+        background: var(--card-bg);
+    }
+
+    /* Lista de Pontos Salvos */
+    .pontos-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .ponto-item {
+        background: var(--darker-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 15px;
+        transition: all 0.2s;
+    }
+
+    .ponto-item:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .ponto-item.editing {
+        border-color: var(--accent);
+        background: rgba(102, 126, 234, 0.1);
+    }
+
+    .ponto-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .ponto-nome {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 15px;
+    }
+
+    .ponto-coords {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-family: 'Courier New', monospace;
+        line-height: 1.6;
+        margin-bottom: 10px;
+    }
+
+    .ponto-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-icon {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+    }
+
+    .btn-edit {
+        background: var(--accent);
+        color: white;
+    }
+
+    .btn-edit:hover {
+        background: #5568d3;
+    }
+
+    .btn-delete {
+        background: var(--danger);
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background: #e53e3e;
+    }
+
+    .btn-view {
+        background: #48bb78;
+        color: white;
+    }
+
+    .btn-view:hover {
+        background: #38a169;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+        .config-grid {
+            grid-template-columns: 1fr;
+        }
+
+        #map {
+            height: 400px;
+        }
+
+        .pontos-list {
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+        <div class="page-header">
+            <h1>📍 Configuração de Ponto Base</h1>
+            <p>Configure manualmente um novo ponto base para sua operação</p>
+        </div>
+
+        <!-- Lista de Pontos Base Salvos -->
+        <div class="pontos-salvos-card" style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0; color: var(--text);">📋 Pontos Base Salvos</h3>
+            <div id="pontosList" class="pontos-list">
+                <p style="color: var(--text-muted); text-align: center; padding: 20px;">Carregando pontos...</p>
+            </div>
+        </div>
+        
+        <div class="config-grid">
+            <div class="form-card">
+                <h3 style="margin-top: 0; color: var(--text);">
+                    ⚙️ Dados do Ponto Base
+                </h3>
+                
+                <form id="pontoBaseForm">
+                    <input type="hidden" id="pontoId" value="">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="nomePonto">
+                            📝 Nome do Ponto Base
+                        </label>
+                        <input type="text" id="nomePonto" class="form-input" placeholder="Ex: Centro de Distribuição Norte" required>
+                        <small style="color: #666;">
+                            Digite um nome descritivo para identificar este ponto base
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="rangeAtuacao">
+                            📏 Range de Atuação
+                        </label>
+                        <input type="range" id="rangeAtuacao" class="range-input" min="1" max="50" value="10" step="1">
+                        <span class="range-value" id="rangeValue">10 km</span>
+                        <small style="display: block; color: #666; margin-top: 8px;">
+                            Defina o alcance máximo de atendimento deste ponto base
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            🌐 Coordenadas Selecionadas
+                        </label>
+                        <div class="coordinates-display" id="coordenadas">
+                            Latitude: --<br>
+                            Longitude: --<br>
+                            <small style="color: #666;">Clique no mapa para selecionar a localização</small>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-save" id="saveBtn" disabled>
+                        💾 Salvar Ponto Base
+                    </button>
+                </form>
+                
+                <div id="status" class="status"></div>
+            </div>
+            
+            <div class="map-card">
+                <h3 style="margin-top: 0; color: var(--text);">
+                    🗺️ Selecionar Localização
+                </h3>
+                
+                <div class="map-instructions">
+                    <strong>Instruções:</strong>
+                    <ul style="margin: 8px 0 0 20px; padding: 0;">
+                        <li>Clique no mapa para marcar a localização do ponto base</li>
+                        <li>Arraste o marcador para ajustar a posição</li>
+                        <li>O círculo azul mostra o range de atuação</li>
+                    </ul>
+                </div>
+                
+                <div id="map"></div>
+            </div>
+        </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    (function(){
+        let map, marker, circle;
+        let selectedLat = null, selectedLng = null;
+        let currentRange = 10;
+        let pontosSalvos = [];
+        let editingId = null;
+        const userId = "{{ session.get('user_id', 'anon') }}";
+        
+        // Inicializa o mapa
+        function initMap() {
+            map = L.map('map').setView([-15.7942, -47.8822], 10);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            map.on('click', function(e) {
+                addMarker(e.latlng.lat, e.latlng.lng);
+            });
+        }
+        
+        async function loadPontosSalvos() {
+            try {
+                const response = await fetch(`{{ url_for('main.pontosSaida') }}?action=list`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    pontosSalvos = data.pontos || [];
+                    renderPontosList();
+                    addPontosToMap();
+                } else {
+                    console.error('Erro ao carregar pontos:', data.error);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar pontos:', error);
+                document.getElementById('pontosList').innerHTML = 
+                    '<p style="color: var(--danger); text-align: center;">Erro ao carregar pontos salvos</p>';
+            }
+        }
+        
+        // Renderiza lista de pontos
+        function renderPontosList() {
+            const container = document.getElementById('pontosList');
+            
+            if (pontosSalvos.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Nenhum ponto base cadastrado ainda</p>';
+                return;
+            }
+            
+            container.innerHTML = pontosSalvos.map(ponto => `
+                <div class="ponto-item ${editingId === ponto.id ? 'editing' : ''}" data-id="${ponto.id}">
+                    <div class="ponto-header">
+                        <span class="ponto-nome">${ponto.nome}</span>
+                    </div>
+                    <div class="ponto-coords">
+                        📍 ${ponto.latitude.toFixed(6)}, ${ponto.longitude.toFixed(6)}
+                    </div>
+                    <div class="ponto-actions">
+                        <button class="btn-icon btn-view" onclick="viewPonto(${ponto.id})">👁️ Ver</button>
+                        <button class="btn-icon btn-edit" onclick="editPonto(${ponto.id})">✏️ Editar</button>
+                        <button class="btn-icon btn-delete" onclick="deletePonto(${ponto.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Adiciona todos os pontos salvos no mapa
+        function addPontosToMap() {
+            pontosSalvos.forEach(ponto => {
+                const m = L.marker([ponto.latitude, ponto.longitude]).addTo(map);
+                m.bindPopup(`<strong>${ponto.nome}</strong><br>Ponto Base`);
+            });
+        }
+        
+        // Visualiza ponto no mapa
+        window.viewPonto = function(id) {
+            const ponto = pontosSalvos.find(p => p.id === id);
+            if (ponto) {
+                map.setView([ponto.latitude, ponto.longitude], 14);
+                addMarker(ponto.latitude, ponto.longitude);
+            }
+        }
+        
+        // Edita ponto
+        window.editPonto = function(id) {
+            const ponto = pontosSalvos.find(p => p.id === id);
+            if (!ponto) return;
+            
+            editingId = id;
+            document.getElementById('pontoId').value = id;
+            document.getElementById('nomePonto').value = ponto.nome;
+            
+            addMarker(ponto.latitude, ponto.longitude);
+            map.setView([ponto.latitude, ponto.longitude], 14);
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.textContent = '✏️ Atualizar Ponto Base';
+            saveBtn.disabled = false;
+            
+            renderPontosList();
+            showStatus('✏️ Modo de edição ativado', 'success');
+        }
+        
+        // Deleta ponto
+        window.deletePonto = async function(id) {
+            const ponto = pontosSalvos.find(p => p.id === id);
+            if (!confirm(`Tem certeza que deseja excluir "${ponto.nome}"?`)) return;
+            
+            try {
+                const response = await fetch(`{{ url_for('main.pontosSaida') }}?id=${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus('✅ ' + data.message, 'success');
+                    await loadPontosSalvos();
+                    
+                    // Limpa formulário se estava editando este ponto
+                    if (editingId === id) {
+                        resetForm();
+                    }
+                } else {
+                    showStatus('❌ ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Erro ao excluir ponto', 'error');
+                console.error(error);
+            }
+        }
+        
+        function addMarker(lat, lng) {
+            selectedLat = lat;
+            selectedLng = lng;
+            
+            // Remove marcador anterior se existir
+            if (marker) {
+                map.removeLayer(marker);
+            }
+            if (circle) {
+                map.removeLayer(circle);
+            }
+            
+            // Adiciona novo marcador
+            marker = L.marker([lat, lng], {
+                draggable: true
+            }).addTo(map);
+            
+            // Adiciona círculo do range
+            circle = L.circle([lat, lng], {
+                color: '#667eea',
+                fillColor: '#667eea',
+                fillOpacity: 0.1,
+                radius: currentRange * 1000 // converter km para metros
+            }).addTo(map);
+            
+            // Permite arrastar o marcador
+            marker.on('dragend', function(e) {
+                const newPos = e.target.getLatLng();
+                selectedLat = newPos.lat;
+                selectedLng = newPos.lng;
+                
+                // Atualiza círculo
+                circle.setLatLng([selectedLat, selectedLng]);
+                
+                updateCoordinatesDisplay();
+            });
+            
+            updateCoordinatesDisplay();
+            updateSaveButton();
+        }
+        
+        function updateCoordinatesDisplay() {
+            const coordDiv = document.getElementById('coordenadas');
+            if (selectedLat && selectedLng) {
+                coordDiv.innerHTML = `
+                    Latitude: ${selectedLat.toFixed(6)}<br>
+                    Longitude: ${selectedLng.toFixed(6)}<br>
+                    <small style="color: #28a745;">✓ Localização selecionada</small>
+                `;
+            }
+        }
+        
+        function updateSaveButton() {
+            const saveBtn = document.getElementById('saveBtn');
+            const nomePonto = document.getElementById('nomePonto').value.trim();
+            
+            if (selectedLat && selectedLng && nomePonto) {
+                saveBtn.disabled = false;
+            } else {
+                saveBtn.disabled = true;
+            }
+        }
+        
+        function updateRange() {
+            const rangeInput = document.getElementById('rangeAtuacao');
+            const rangeValue = document.getElementById('rangeValue');
+            
+            currentRange = parseInt(rangeInput.value);
+            rangeValue.textContent = currentRange + ' km';
+            
+            // Atualiza círculo se existir
+            if (circle) {
+                circle.setRadius(currentRange * 1000);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('nomePonto').addEventListener('input', updateSaveButton);
+        document.getElementById('rangeAtuacao').addEventListener('input', updateRange);
+        
+        // Submit do formulário (CREATE ou UPDATE)
+        document.getElementById('pontoBaseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const nomePonto = document.getElementById('nomePonto').value.trim();
+            const pontoId = document.getElementById('pontoId').value;
+            
+            if (!selectedLat || !selectedLng || !nomePonto) {
+                showStatus('❌ Preencha todos os campos e selecione uma localização no mapa', 'error');
+                return;
+            }
+            
+            const pontoData = {
+                nome: nomePonto,
+                latitude: selectedLat,
+                longitude: selectedLng,
+                range: currentRange
+            };
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '💾 Salvando...';
+            
+            try {
+                let response;
+                
+                // UPDATE ou CREATE
+                if (pontoId) {
+                    // UPDATE
+                    response = await fetch(`{{ url_for('main.pontosSaida') }}?id=${pontoId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pontoData)
+                    });
+                } else {
+                    // CREATE
+                    response = await fetch('{{ url_for("main.pontosSaida") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(pontoData)
+                    });
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`✅ ${data.message}`, 'success');
+                    resetForm();
+                    await loadPontosSalvos();
+                } else {
+                    showStatus(`❌ ${data.error}`, 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
+            } catch (error) {
+                showStatus('❌ Erro ao salvar ponto base', 'error');
+                console.error(error);
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        });
+        
+        // Reset formulário
+        function resetForm() {
+            document.getElementById('pontoBaseForm').reset();
+            document.getElementById('pontoId').value = '';
+            document.getElementById('rangeAtuacao').value = 10;
+            updateRange();
+            editingId = null;
+            
+            // Remove marcador
+            if (marker) map.removeLayer(marker);
+            if (circle) map.removeLayer(circle);
+            selectedLat = null;
+            selectedLng = null;
+            
+            document.getElementById('coordenadas').innerHTML = `
+                Latitude: --<br>
+                Longitude: --<br>
+                <small style="color: #666;">Clique no mapa para selecionar a localização</small>
+            `;
+            
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '💾 Salvar Ponto Base';
+            
+            renderPontosList();
+        }
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        initMap();
+        updateRange();
+        loadPontosSalvos();
+    })();
+    </script>
+{% endblock %}
