@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "app.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "app.py" }
+  ],
+  "env": {
+    "FLASK_ENV": "production",
+    "SECRET_KEY": "@SECRET_KEY",
+    "DATABASE_URL": "@DATABASE_URL",
+    "SQLALCHEMY_DATABASE_URI": "@DATABASE_URL",
+    "MAIL_SERVER": "@MAIL_SERVER",
+    "MAIL_PORT": "@MAIL_PORT",
+    "MAIL_USERNAME": "@MAIL_USERNAME",
+    "MAIL_PASSWORD": "@MAIL_PASSWORD",
+    "SENTRY_DSN": "@SENTRY_DSN",
+    "REDIS_URL": "@REDIS_URL",
+    "OAUTH_GOOGLE_CLIENT_ID": "@OAUTH_GOOGLE_CLIENT_ID",
+    "OAUTH_GOOGLE_CLIENT_SECRET": "@OAUTH_GOOGLE_CLIENT_SECRET"
+  },
+  "functions": {
+    "app.py": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
+}
