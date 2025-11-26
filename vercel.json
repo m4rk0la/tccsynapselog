@@ -23,7 +23,20 @@
   "functions": {
     "app.py": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 30,
+      "excludeFiles": [
+        "**/*.pyc",
+        "**/*.test.js",
+        "**/__pycache__/**",
+        "**/numpy/doc/**",
+        "**/pandas/io/formats/templates/**",
+        "**/scipy/linalg/tests/**",
+        "**/sklearn/datasets/data/**",
+        "**/tests/**",
+        "**/test/**",
+        "**/docs/**"
+      ]
     }
   }
 }
+
