@@ -1,15 +1,20 @@
 {
   "version": 2,
   "builds": [
-    { "src": "app.py", "use": "@vercel/python" }
+    { 
+      "src": "app.py", 
+      "use": "@vercel/python" 
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "app.py" }
+    { 
+      "src": "/(.*)", 
+      "dest": "app.py" 
+    }
   ],
   "env": {
     "FLASK_ENV": "production",
     "SECRET_KEY": "@SECRET_KEY",
-    "DATABASE_URL": "@DATABASE_URL",
     "SQLALCHEMY_DATABASE_URI": "@DATABASE_URL",
     "MAIL_SERVER": "@MAIL_SERVER",
     "MAIL_PORT": "@MAIL_PORT",
