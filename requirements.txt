@@ -13,3 +13,4 @@ openpyxl
 shapely
 scikit-learn
 numpy
+pip-autoremove
