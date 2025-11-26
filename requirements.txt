@@ -1,5 +1,6 @@
 Flask
 Flask-WTF
+Flask-Migrate
 Flask-SQLAlchemy
 Flask-Login
 python-dotenv
@@ -11,3 +12,4 @@ shapely
 scikit-learn
 numpy
 pip-autoremove
+
