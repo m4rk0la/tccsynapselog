@@ -25,18 +25,20 @@
       "memory": 1024,
       "maxDuration": 30,
       "excludeFiles": [
-        "**/*.pyc",
-        "**/*.test.js",
         "**/__pycache__/**",
-        "**/numpy/doc/**",
-        "**/pandas/io/formats/templates/**",
-        "**/scipy/linalg/tests/**",
-        "**/sklearn/datasets/data/**",
         "**/tests/**",
         "**/test/**",
-        "**/docs/**"
+        "**/docs/**",
+        "**/*.pyc",
+        "**/numpy/doc/**",
+        "**/scipy/tests/**",
+        "**/pandas/tests/**",
+        "**/sklearn/datasets/data/**",
+        "**/sklearn/tests/**",
+        "**/shapely/tests/**"
       ]
     }
   }
 }
+
 
