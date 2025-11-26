@@ -13,4 +13,3 @@ openpyxl
 shapely
 scikit-learn
 numpy
-sklearn
