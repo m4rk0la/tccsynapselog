@@ -7,7 +7,7 @@
     }
   ],
   "env": {
-    "FLASK_ENV": "production",
+    "FLASK_ENV": "production"
   },
   "functions": {
     "api/index.py": {
@@ -17,6 +17,7 @@
     }
   }
 }
+
 
 
 
